@@ -15,11 +15,17 @@ class AudioScreen extends StatefulWidget {
 
 class _AudioScreenState extends State<AudioScreen> {
   late Future<List<AudioTrack>> _audioTracksFuture;
+  List<AudioTrack> _allAudioTracks = [];
 
   @override
   void initState() {
     super.initState();
     _audioTracksFuture = SoundLibrary.getAvailableSounds();
+    _audioTracksFuture.then((tracks) {
+      setState(() {
+        _allAudioTracks = tracks;
+      });
+    });
   }
 
   String _formatDuration(Duration duration) {
@@ -89,7 +95,12 @@ class _AudioScreenState extends State<AudioScreen> {
                       return _AudioListItem(
                         track: track,
                         isPlaying: isPlayingThisTrack,
-                        onTap: () => audioPlayerNotifier.playTrack(track),
+                        onTap: () async {
+                          await audioPlayerNotifier.setPlaylistAndPlay(
+                            audioTracks,
+                            initialTrack: track,
+                          );
+                        },
                       );
                     },
                   );
@@ -154,8 +165,8 @@ class _AudioListItem extends StatelessWidget {
           style: TextStyle(color: Colors.grey),
         ),
         trailing: isPlaying
-            ? Icon(Icons.equalizer, color: Colors.blueAccent)
-            : Icon(Icons.chevron_right, color: Colors.grey),
+            ? const Icon(Icons.equalizer, color: Colors.blueAccent)
+            : const Icon(Icons.chevron_right, color: Colors.grey),
         onTap: onTap,
       ),
     );
@@ -191,7 +202,7 @@ class _NowPlayingBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.blueAccent,
                   borderRadius: BorderRadius.circular(10),
-                  image: DecorationImage(
+                  image: const DecorationImage(
                     image: NetworkImage(
                       'https://placehold.co/50x50/ADD8E6/000000?text=Audio',
                     ),
@@ -220,15 +231,32 @@ class _NowPlayingBar extends StatelessWidget {
                   ],
                 ),
               ),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.skip_previous),
+                iconSize: 40,
+                color: Colors.blueAccent,
+                onPressed: audioPlayerNotifier.playPrevious,
+              ),
               IconButton(
                 icon: Icon(
                   audioPlayerNotifier.isPlaying
                       ? Icons.pause_circle_filled
                       : Icons.play_circle_fill,
                 ),
-                iconSize: 40,
+                iconSize: 56,
                 color: Colors.blueAccent,
                 onPressed: audioPlayerNotifier.togglePlayPause,
+              ),
+              IconButton(
+                icon: const Icon(Icons.skip_next),
+                iconSize: 40,
+                color: Colors.blueAccent,
+                onPressed: audioPlayerNotifier.playNext,
               ),
             ],
           ),
@@ -263,6 +291,35 @@ class _NowPlayingBar extends StatelessWidget {
                   formatDuration(audioPlayerNotifier.totalDuration),
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
+              ],
+            ),
+          ),
+          Padding(
+            // Added padding here
+            padding: const EdgeInsets.symmetric(
+              horizontal: 4.0,
+            ), // Adjust padding as desired
+            child: Row(
+              children: [
+                Icon(
+                  audioPlayerNotifier.volume == 0
+                      ? Icons.volume_off
+                      : Icons.volume_mute,
+                  color: Colors.grey,
+                ),
+                Expanded(
+                  child: Slider(
+                    value: audioPlayerNotifier.volume,
+                    min: 0.0,
+                    max: 1.0,
+                    onChanged: (value) {
+                      audioPlayerNotifier.setVolume(value);
+                    },
+                    activeColor: Colors.blueAccent,
+                    inactiveColor: Colors.grey[300],
+                  ),
+                ),
+                const Icon(Icons.volume_up, color: Colors.grey),
               ],
             ),
           ),

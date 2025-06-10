@@ -8,20 +8,27 @@ class AudioPlayerNotifier extends ChangeNotifier {
   AudioTrack? _currentTrack;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
-  bool _isPlaying = false;
+  bool _isPlaying = false; // Managed solely by playerStateStream
+  double _volume = 1.0;
+
+  List<AudioTrack> _playlist = [];
+  int _currentTrackIndex = -1;
 
   AudioTrack? get currentTrack => _currentTrack;
   Duration get currentPosition => _currentPosition;
   Duration get totalDuration => _totalDuration;
-  bool get isPlaying => _isPlaying;
+  bool get isPlaying =>
+      _isPlaying; // This getter reflects the actual player state
   double get playbackProgress => _totalDuration.inMilliseconds > 0
       ? _currentPosition.inMilliseconds / _totalDuration.inMilliseconds
       : 0.0;
+  double get volume => _volume;
 
   AudioPlayerNotifier() {
+    // Rely solely on playerStateStream for _isPlaying updates
     _audioPlayer.playerStateStream.listen((playerState) {
       _isPlaying = playerState.playing;
-      notifyListeners();
+      notifyListeners(); // Notify UI ONLY when the actual player state changes
     });
 
     _audioPlayer.positionStream.listen((position) {
@@ -35,44 +42,91 @@ class AudioPlayerNotifier extends ChangeNotifier {
     });
 
     _audioPlayer.sequenceStateStream.listen((sequenceState) {
-      if (sequenceState?.currentSource == null && _isPlaying) {
-        _isPlaying = false;
+      if (sequenceState?.currentSource == null &&
+          _isPlaying &&
+          _playlist.isNotEmpty) {
+        playNext();
+      } else if (sequenceState?.currentSource == null && !_isPlaying) {
         _currentPosition = Duration.zero;
         notifyListeners();
       }
     });
+
+    _audioPlayer.setVolume(_volume);
   }
 
-  Future<void> playTrack(AudioTrack track) async {
+  Future<void> setPlaylistAndPlay(
+    List<AudioTrack> newPlaylist, {
+    AudioTrack? initialTrack,
+  }) async {
+    _playlist = newPlaylist;
+    if (initialTrack != null) {
+      _currentTrackIndex = _playlist.indexWhere(
+        (track) => track.id == initialTrack.id,
+      );
+    } else if (_playlist.isNotEmpty) {
+      _currentTrackIndex = 0;
+    } else {
+      _currentTrackIndex = -1;
+    }
+
+    if (_currentTrackIndex != -1) {
+      await _playTrackInternal(_playlist[_currentTrackIndex]);
+    } else {
+      await _audioPlayer.stop();
+      _currentTrack = null;
+      // _isPlaying will be updated by playerStateStream to false
+      _currentPosition = Duration.zero;
+      _totalDuration = Duration.zero;
+      notifyListeners(); // Notify for track change, duration, position
+    }
+  }
+
+  Future<void> _playTrackInternal(AudioTrack track) async {
     try {
       if (_currentTrack?.id != track.id) {
         await _audioPlayer.setAsset(track.filePath);
-        _currentTrack = track;
+        _currentTrack = track; // Update current track immediately
       }
       await _audioPlayer.play();
-      _isPlaying = true;
+      // _isPlaying will be updated by playerStateStream
     } catch (e) {
       print("Error playing audio: $e");
-      _isPlaying = false;
+      // _isPlaying will be updated by playerStateStream
     } finally {
-      notifyListeners();
+      notifyListeners(); // Notify for track change
     }
+  }
+
+  Future<void> playTrack(AudioTrack track) async {
+    if (_playlist.isEmpty) {
+      _playlist = [track];
+      _currentTrackIndex = 0;
+    } else {
+      _currentTrackIndex = _playlist.indexWhere((t) => t.id == track.id);
+      if (_currentTrackIndex == -1) {
+        _playlist.add(track);
+        _currentTrackIndex = _playlist.length - 1;
+      }
+    }
+    await _playTrackInternal(track);
   }
 
   Future<void> pause() async {
     await _audioPlayer.pause();
-    _isPlaying = false;
-    notifyListeners();
+    // Removed direct _isPlaying update and notifyListeners() here.
+    // playerStateStream will handle it.
   }
 
   Future<void> resume() async {
     await _audioPlayer.play();
-    _isPlaying = true;
-    notifyListeners();
+    // Removed direct _isPlaying update and notifyListeners() here.
+    // playerStateStream will handle it.
   }
 
   Future<void> togglePlayPause() async {
-    if (_isPlaying) {
+    if (_audioPlayer.playing) {
+      // Check player's actual state
       await pause();
     } else {
       await resume();
@@ -81,6 +135,40 @@ class AudioPlayerNotifier extends ChangeNotifier {
 
   Future<void> seek(Duration position) async {
     await _audioPlayer.seek(position);
+  }
+
+  Future<void> playNext() async {
+    if (_playlist.isEmpty) return;
+    int nextIndex = (_currentTrackIndex + 1) % _playlist.length;
+    if (nextIndex == _currentTrackIndex && _playlist.length == 1) {
+      await seek(Duration.zero);
+      await resume();
+    } else {
+      _currentTrackIndex = nextIndex;
+      await _playTrackInternal(_playlist[_currentTrackIndex]);
+    }
+  }
+
+  Future<void> playPrevious() async {
+    if (_playlist.isEmpty) return;
+    int prevIndex =
+        (_currentTrackIndex - 1 + _playlist.length) % _playlist.length;
+    if (prevIndex == _currentTrackIndex && _playlist.length == 1) {
+      await seek(Duration.zero);
+      await resume();
+    } else {
+      _currentTrackIndex = prevIndex;
+      await _playTrackInternal(_playlist[_currentTrackIndex]);
+    }
+  }
+
+  Future<void> setVolume(double volume) async {
+    if (volume < 0.0 || volume > 1.0) {
+      throw ArgumentError('Volume must be between 0.0 and 1.0');
+    }
+    _volume = volume;
+    await _audioPlayer.setVolume(volume);
+    notifyListeners();
   }
 
   @override

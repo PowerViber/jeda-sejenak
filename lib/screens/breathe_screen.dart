@@ -1,11 +1,21 @@
 // --- lib/screens/breathe_screen.dart ---
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../notifiers/breathing_notifier.dart';
-import '../widgets/custom_search_bar.dart';
+import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
+import 'package:jeda_sejenak/widgets/custom_search_bar.dart';
+import 'package:jeda_sejenak/widgets/breathe_screen_audio_player.dart'; // New import
+// Removed direct import for audio notifier and sound library, as it's handled by BreatheScreenAudioPlayer
 
-class BreatheScreen extends StatelessWidget {
+class BreatheScreen extends StatefulWidget {
   const BreatheScreen({super.key});
+
+  @override
+  State<BreatheScreen> createState() => _BreatheScreenState();
+}
+
+class _BreatheScreenState extends State<BreatheScreen> {
+  // Removed initState logic that automatically plays audio.
+  // The BreatheScreenAudioPlayer will now hide itself if no track is playing.
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +61,9 @@ class BreatheScreen extends StatelessWidget {
     }
 
     IconData getPlayPauseIcon(BreathingPhase phase) {
-      if (phase == BreathingPhase.paused ||
-          phase == BreathingPhase.initial ||
+      if (phase == BreathingPhase.paused) {
+        return Icons.play_arrow;
+      } else if (phase == BreathingPhase.initial ||
           phase == BreathingPhase.complete) {
         return Icons.play_arrow;
       }
@@ -90,19 +101,15 @@ class BreatheScreen extends StatelessWidget {
                 duration: const Duration(milliseconds: 1000),
                 curve: Curves.easeInOut,
                 width:
-                    [
-                      BreathingPhase.inhale,
-                      BreathingPhase.hold,
-                      BreathingPhase.exhale,
-                    ].contains(breathingNotifier.phase)
+                    breathingNotifier.phase == BreathingPhase.inhale ||
+                        breathingNotifier.phase == BreathingPhase.exhale ||
+                        breathingNotifier.phase == BreathingPhase.hold
                     ? 250
                     : 200,
                 height:
-                    [
-                      BreathingPhase.inhale,
-                      BreathingPhase.hold,
-                      BreathingPhase.exhale,
-                    ].contains(breathingNotifier.phase)
+                    breathingNotifier.phase == BreathingPhase.inhale ||
+                        breathingNotifier.phase == BreathingPhase.exhale ||
+                        breathingNotifier.phase == BreathingPhase.hold
                     ? 250
                     : 200,
                 decoration: BoxDecoration(
@@ -150,11 +157,9 @@ class BreatheScreen extends StatelessWidget {
               children: [
                 ElevatedButton.icon(
                   onPressed: () {
-                    if ([
-                      BreathingPhase.initial,
-                      BreathingPhase.complete,
-                      BreathingPhase.paused,
-                    ].contains(breathingNotifier.phase)) {
+                    if (breathingNotifier.phase == BreathingPhase.initial ||
+                        breathingNotifier.phase == BreathingPhase.complete ||
+                        breathingNotifier.phase == BreathingPhase.paused) {
                       breathingNotifier.start();
                     } else {
                       breathingNotifier.pause();
@@ -179,10 +184,8 @@ class BreatheScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 20),
-                if (![
-                  BreathingPhase.initial,
-                  BreathingPhase.complete,
-                ].contains(breathingNotifier.phase))
+                if (breathingNotifier.phase != BreathingPhase.initial &&
+                    breathingNotifier.phase != BreathingPhase.complete)
                   ElevatedButton.icon(
                     onPressed: () {
                       breathingNotifier.reset();
@@ -204,7 +207,7 @@ class BreatheScreen extends StatelessWidget {
               ],
             ),
             const Spacer(),
-            _buildAudioPlayerPlaceholder(),
+            const BreatheScreenAudioPlayer(), // This widget will now handle its own visibility
           ],
         ),
       ),
@@ -227,59 +230,11 @@ class BreatheScreen extends StatelessWidget {
       ),
       side: const BorderSide(color: Colors.blueAccent),
       onSelected: (selected) {
-        if (selected) notifier.setPattern(pattern);
+        if (selected) {
+          notifier.setPattern(pattern);
+        }
       },
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-    );
-  }
-
-  Widget _buildAudioPlayerPlaceholder() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.music_note, color: Colors.blueAccent),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Home - Resonance',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Slider(
-                  value: 0.5,
-                  min: 0,
-                  max: 1,
-                  onChanged: (value) {},
-                  activeColor: Colors.blueAccent,
-                  inactiveColor: Colors.grey[300],
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.play_circle_fill,
-            color: Colors.blueAccent,
-            size: 40,
-          ),
-        ],
-      ),
     );
   }
 }
