@@ -95,7 +95,7 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const Text(
-                      'Home - Resonance',
+                      '',
                       style: TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   ],

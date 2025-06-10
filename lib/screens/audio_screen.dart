@@ -222,7 +222,7 @@ class _NowPlayingBar extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      'Home - Resonance',
+                      '',
                       style: TextStyle(color: Colors.grey[700], fontSize: 13),
                     ),
                   ],

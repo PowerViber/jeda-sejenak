@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
+import 'package:jeda_sejenak/models/breathing_session_config.dart'; // Import Product
+import 'package:jeda_sejenak/builders/breathing_session_config_builder.dart'; // Import Builder
 
 class BreathingSettingsDialog extends StatefulWidget {
   const BreathingSettingsDialog({super.key});
@@ -25,8 +27,7 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
     _inhaleController.text = notifier.inhaleDuration.toString();
     _holdController.text = notifier.holdDuration.toString();
     _exhaleController.text = notifier.exhaleDuration.toString();
-    _sessionTimeController.text = notifier.totalSessionDuration
-        .toString(); // Already in minutes
+    _sessionTimeController.text = notifier.totalSessionDuration.toString();
   }
 
   @override
@@ -46,15 +47,51 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
     int exhale = int.tryParse(_exhaleController.text) ?? 0;
     int sessionTimeMinutes = int.tryParse(_sessionTimeController.text) ?? 0;
 
-    notifier.setCustomPattern(inhale, hold, exhale);
-    notifier.setTotalSessionDuration(sessionTimeMinutes);
-    Navigator.pop(context); // Close the bottom sheet
+    // --- Using the Builder Pattern here ---
+    final BreathingSessionConfig config = BreathingSessionConfigBuilder()
+        .setInhaleDuration(inhale)
+        .setHoldDuration(hold)
+        .setExhaleDuration(exhale)
+        .setTotalSessionDurationMinutes(sessionTimeMinutes)
+        .build();
+
+    notifier.applyConfiguration(config); // Apply the built configuration
+    Navigator.pop(context);
+  }
+
+  // --- Helper method for predefined patterns also uses the builder for consistency ---
+  void _applyPredefinedPattern(String patternName, BreathingNotifier notifier) {
+    final Map<String, List<int>> predefinedPatterns = {
+      '4-4-6': [4, 4, 6],
+      '4-7-8': [4, 7, 8],
+    };
+    final pattern = predefinedPatterns[patternName];
+    if (pattern != null) {
+      final int sessionTimeMinutes =
+          int.tryParse(_sessionTimeController.text) ??
+          notifier.totalSessionDuration; // Keep current session time
+
+      final BreathingSessionConfig config = BreathingSessionConfigBuilder()
+          .setInhaleDuration(pattern[0])
+          .setHoldDuration(pattern[1])
+          .setExhaleDuration(pattern[2])
+          .setTotalSessionDurationMinutes(
+            sessionTimeMinutes,
+          ) // Apply existing total session duration
+          .build();
+
+      notifier.applyConfiguration(config);
+      // Update text controllers to reflect predefined pattern values
+      _inhaleController.text = pattern[0].toString();
+      _holdController.text = pattern[1].toString();
+      _exhaleController.text = pattern[2].toString();
+      // No need to update sessionTimeController as it wasn't changed by predefined pattern
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final breathingNotifier = context
-        .watch<BreathingNotifier>(); // To react to predefined pattern changes
+    final breathingNotifier = context.watch<BreathingNotifier>();
 
     return Padding(
       padding: EdgeInsets.only(
@@ -199,11 +236,7 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
       side: const BorderSide(color: Colors.blueAccent),
       onSelected: (selected) {
         if (selected) {
-          notifier.selectPredefinedPattern(patternName);
-          // Update text controllers in dialog to reflect selected predefined pattern
-          _inhaleController.text = notifier.inhaleDuration.toString();
-          _holdController.text = notifier.holdDuration.toString();
-          _exhaleController.text = notifier.exhaleDuration.toString();
+          _applyPredefinedPattern(patternName, notifier); // Use the new helper
         }
       },
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),

@@ -1,14 +1,20 @@
 // --- lib/models/breathing_memento.dart ---
+/// Represents a saved state (memento) of the BreathingNotifier.
+/// Contains all necessary information to restore the breathing exercise
+/// to a previous point in time.
 class BreathingMemento {
-  final int currentDuration; // Current countdown of the active phase
-  final String selectedPattern; // The selected pattern string (e.g., 'Custom')
-  final String
-  phase; // Current breathing phase as a string (e.g., 'BreathingPhase.inhale')
-  final int inhaleDuration; // Custom inhale duration
-  final int holdDuration; // Custom hold duration
-  final int exhaleDuration; // Custom exhale duration
-  final int sessionRemainingTime; // Remaining time for the overall session
+  final int currentDuration;
+  final String selectedPattern;
+  final String phase;
+  final int inhaleDuration;
+  final int holdDuration;
+  final int exhaleDuration;
+  final int sessionRemainingTime;
+  // This is the named parameter that needs to be defined in the constructor
+  final int totalSessionDurationSecondsAtCapture;
 
+  // The constructor MUST explicitly list 'totalSessionDurationSecondsAtCapture'
+  // as a required named parameter.
   BreathingMemento({
     required this.currentDuration,
     required this.selectedPattern,
@@ -17,5 +23,6 @@ class BreathingMemento {
     required this.holdDuration,
     required this.exhaleDuration,
     required this.sessionRemainingTime,
+    required this.totalSessionDurationSecondsAtCapture, // <--- THIS LINE IS CRITICAL
   });
 }

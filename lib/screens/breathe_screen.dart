@@ -1,12 +1,10 @@
 // --- lib/screens/breathe_screen.dart ---
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
 import 'package:jeda_sejenak/widgets/custom_search_bar.dart';
 import 'package:jeda_sejenak/widgets/breathe_screen_audio_player.dart';
 import 'package:jeda_sejenak/services/breathing_caretaker.dart';
-import 'package:jeda_sejenak/models/breathing_memento.dart';
 import 'package:jeda_sejenak/widgets/breathing_settings_dialog.dart'; // Import the new dialog
 
 class BreatheScreen extends StatefulWidget {
