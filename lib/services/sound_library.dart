@@ -1,44 +1,48 @@
 // --- lib/services/sound_library.dart ---
-import '../models/audio_track.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:jeda_sejenak/models/audio_track.dart';
 
 class SoundLibrary {
-  static List<AudioTrack> getAvailableSounds() {
-    return [
-      AudioTrack(
-        id: '1',
-        title: 'Relaxing Audio 1',
-        filePath: 'assets/audio/relaxing_audio_1.mp3',
-      ),
-      AudioTrack(
-        id: '2',
-        title: 'Ocean Waves',
-        filePath: 'assets/audio/relaxing_audio_2.mp3',
-      ),
-      AudioTrack(
-        id: '3',
-        title: 'Forest Sounds',
-        filePath: 'assets/audio/relaxing_audio_3.mp3',
-      ),
-      AudioTrack(
-        id: '4',
-        title: 'Calm Piano',
-        filePath: 'assets/audio/relaxing_audio_4.mp3',
-      ),
-      AudioTrack(
-        id: '5',
-        title: 'Meditation Bells',
-        filePath: 'assets/audio/relaxing_audio_5.mp3',
-      ),
-      AudioTrack(
-        id: '6',
-        title: 'Night Ambience',
-        filePath: 'assets/audio/relaxing_audio_1.mp3',
-      ),
-      AudioTrack(
-        id: '7',
-        title: 'Soft Rain',
-        filePath: 'assets/audio/relaxing_audio_2.mp3',
-      ),
-    ];
+  static List<AudioTrack>? _cachedAudioTracks;
+
+  static Future<List<AudioTrack>> getAvailableSounds() async {
+    if (_cachedAudioTracks != null) {
+      return _cachedAudioTracks!;
+    }
+
+    try {
+      final assetManifest = await rootBundle.loadString('AssetManifest.json');
+
+      final Map<String, dynamic> manifestMap = json.decode(assetManifest);
+
+      List<AudioTrack> tracks = [];
+      int idCounter = 1;
+
+      for (String key in manifestMap.keys) {
+        if (key.startsWith('assets/audio/') && key.endsWith('.mp3')) {
+          String fileName = key.split('/').last;
+          String title = fileName.replaceAll('.mp3', '').replaceAll('_', ' ');
+          title = title
+              .split(' ')
+              .map((word) => word[0].toUpperCase() + word.substring(1))
+              .join(' ');
+
+          tracks.add(
+            AudioTrack(
+              id: (idCounter++).toString(),
+              title: title,
+              filePath: key,
+            ),
+          );
+        }
+      }
+
+      _cachedAudioTracks = tracks;
+      return tracks;
+    } catch (e) {
+      print("Error loading audio assets: $e");
+      return [];
+    }
   }
 }

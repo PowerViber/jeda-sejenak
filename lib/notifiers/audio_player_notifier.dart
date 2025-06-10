@@ -1,7 +1,7 @@
 // --- lib/notifiers/audio_player_notifier.dart ---
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import '../models/audio_track.dart';
+import 'package:jeda_sejenak/models/audio_track.dart';
 
 class AudioPlayerNotifier extends ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -19,20 +19,23 @@ class AudioPlayerNotifier extends ChangeNotifier {
       : 0.0;
 
   AudioPlayerNotifier() {
-    _audioPlayer.playerStateStream.listen((state) {
-      _isPlaying = state.playing;
+    _audioPlayer.playerStateStream.listen((playerState) {
+      _isPlaying = playerState.playing;
       notifyListeners();
     });
-    _audioPlayer.positionStream.listen((pos) {
-      _currentPosition = pos;
+
+    _audioPlayer.positionStream.listen((position) {
+      _currentPosition = position;
       notifyListeners();
     });
-    _audioPlayer.durationStream.listen((dur) {
-      _totalDuration = dur ?? Duration.zero;
+
+    _audioPlayer.durationStream.listen((duration) {
+      _totalDuration = duration ?? Duration.zero;
       notifyListeners();
     });
-    _audioPlayer.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) {
+
+    _audioPlayer.sequenceStateStream.listen((sequenceState) {
+      if (sequenceState?.currentSource == null && _isPlaying) {
         _isPlaying = false;
         _currentPosition = Duration.zero;
         notifyListeners();
@@ -69,7 +72,11 @@ class AudioPlayerNotifier extends ChangeNotifier {
   }
 
   Future<void> togglePlayPause() async {
-    _isPlaying ? await pause() : await resume();
+    if (_isPlaying) {
+      await pause();
+    } else {
+      await resume();
+    }
   }
 
   Future<void> seek(Duration position) async {
