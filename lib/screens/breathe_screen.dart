@@ -1,10 +1,13 @@
 // --- lib/screens/breathe_screen.dart ---
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
 import 'package:jeda_sejenak/widgets/custom_search_bar.dart';
-import 'package:jeda_sejenak/widgets/breathe_screen_audio_player.dart'; // New import
-// Removed direct import for audio notifier and sound library, as it's handled by BreatheScreenAudioPlayer
+import 'package:jeda_sejenak/widgets/breathe_screen_audio_player.dart';
+import 'package:jeda_sejenak/services/breathing_caretaker.dart';
+import 'package:jeda_sejenak/models/breathing_memento.dart';
+import 'package:jeda_sejenak/widgets/breathing_settings_dialog.dart'; // Import the new dialog
 
 class BreatheScreen extends StatefulWidget {
   const BreatheScreen({super.key});
@@ -14,86 +17,152 @@ class BreatheScreen extends StatefulWidget {
 }
 
 class _BreatheScreenState extends State<BreatheScreen> {
-  // Removed initState logic that automatically plays audio.
-  // The BreatheScreenAudioPlayer will now hide itself if no track is playing.
+  // Removed all TextEditingControllers for custom patterns and session time
+  // as they are now managed within BreathingSettingsDialog
+
+  final BreathingCaretaker _caretaker = BreathingCaretaker();
+
+  // No longer need initState for controller initialization as they are in dialog
+
+  @override
+  void dispose() {
+    // No longer need to dispose controllers here
+    super.dispose();
+  }
+
+  String _formatTime(int seconds) {
+    int minutes = seconds ~/ 60;
+    int remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
+  String _getCircleText(BreathingPhase phase) {
+    switch (phase) {
+      case BreathingPhase.initial:
+        return 'Start';
+      case BreathingPhase.inhale:
+        return 'Inhale';
+      case BreathingPhase.hold:
+        return 'Hold';
+      case BreathingPhase.exhale:
+        return 'Exhale';
+      case BreathingPhase.paused:
+        return 'Paused';
+      case BreathingPhase.complete:
+        return 'Done!';
+    }
+  }
+
+  Color _getCircleColor(BreathingPhase phase) {
+    switch (phase) {
+      case BreathingPhase.initial:
+      case BreathingPhase.complete:
+        return Colors.blueAccent;
+      case BreathingPhase.inhale:
+        return Colors.lightBlue.shade300;
+      case BreathingPhase.hold:
+        return Colors.lightBlue.shade500;
+      case BreathingPhase.exhale:
+        return Colors.lightBlue.shade700;
+      case BreathingPhase.paused:
+        return Colors.orangeAccent;
+    }
+  }
+
+  IconData _getPlayPauseIcon(BreathingPhase phase) {
+    if (phase == BreathingPhase.paused) {
+      return Icons.play_arrow;
+    } else if (phase == BreathingPhase.initial ||
+        phase == BreathingPhase.complete) {
+      return Icons.play_arrow;
+    }
+    return Icons.pause;
+  }
 
   @override
   Widget build(BuildContext context) {
     final breathingNotifier = context.watch<BreathingNotifier>();
 
-    String formatTime(int seconds) {
-      int minutes = seconds ~/ 60;
-      int remainingSeconds = seconds % 60;
-      return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-    }
-
-    String getCircleText(BreathingPhase phase) {
-      switch (phase) {
-        case BreathingPhase.initial:
-          return 'Start';
-        case BreathingPhase.inhale:
-          return 'Inhale';
-        case BreathingPhase.hold:
-          return 'Hold';
-        case BreathingPhase.exhale:
-          return 'Exhale';
-        case BreathingPhase.paused:
-          return 'Paused';
-        case BreathingPhase.complete:
-          return 'Done!';
-      }
-    }
-
-    Color getCircleColor(BreathingPhase phase) {
-      switch (phase) {
-        case BreathingPhase.initial:
-        case BreathingPhase.complete:
-          return Colors.blueAccent;
-        case BreathingPhase.inhale:
-          return Colors.lightBlue.shade300;
-        case BreathingPhase.hold:
-          return Colors.lightBlue.shade500;
-        case BreathingPhase.exhale:
-          return Colors.lightBlue.shade700;
-        case BreathingPhase.paused:
-          return Colors.orangeAccent;
-      }
-    }
-
-    IconData getPlayPauseIcon(BreathingPhase phase) {
-      if (phase == BreathingPhase.paused) {
-        return Icons.play_arrow;
-      } else if (phase == BreathingPhase.initial ||
-          phase == BreathingPhase.complete) {
-        return Icons.play_arrow;
-      }
-      return Icons.pause;
-    }
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Jeda Sejenak')),
+      appBar: AppBar(
+        title: const Text('Jeda Sejenak'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (context) =>
+                    const BreathingSettingsDialog(), // Use the new dialog
+              );
+            },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             const CustomSearchBar(),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildPatternButton(context, '4-4-6', breathingNotifier),
-                const SizedBox(width: 10),
-                _buildPatternButton(context, '4-7-8', breathingNotifier),
-              ],
+
+            // Display current pattern and total duration for user info
+            Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Current Pattern: ${breathingNotifier.selectedPatternName}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    if (breathingNotifier.selectedPatternName == 'Custom')
+                      Text(
+                        '(${breathingNotifier.inhaleDuration}-${breathingNotifier.holdDuration}-${breathingNotifier.exhaleDuration})',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Session Duration: ${breathingNotifier.totalSessionDuration} minutes',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+
+            // Main Breathing Circle and Controls
             GestureDetector(
               onTap: () {
                 if (breathingNotifier.phase == BreathingPhase.initial ||
                     breathingNotifier.phase == BreathingPhase.complete ||
                     breathingNotifier.phase == BreathingPhase.paused) {
+                  if (breathingNotifier.phase == BreathingPhase.paused) {
+                    _caretaker.addMemento(breathingNotifier.createMemento());
+                  }
                   breathingNotifier.start();
                 } else {
+                  _caretaker.addMemento(breathingNotifier.createMemento());
                   breathingNotifier.pause();
                 }
               },
@@ -113,11 +182,11 @@ class _BreatheScreenState extends State<BreatheScreen> {
                     ? 250
                     : 200,
                 decoration: BoxDecoration(
-                  color: getCircleColor(breathingNotifier.phase),
+                  color: _getCircleColor(breathingNotifier.phase),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: getCircleColor(
+                      color: _getCircleColor(
                         breathingNotifier.phase,
                       ).withOpacity(0.5),
                       blurRadius: 10,
@@ -130,7 +199,7 @@ class _BreatheScreenState extends State<BreatheScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        formatTime(breathingNotifier.currentDuration),
+                        _formatTime(breathingNotifier.currentPhaseDuration),
                         style: const TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
@@ -139,13 +208,24 @@ class _BreatheScreenState extends State<BreatheScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        getCircleText(breathingNotifier.phase),
+                        _getCircleText(breathingNotifier.phase),
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      if (breathingNotifier.phase != BreathingPhase.initial &&
+                          breathingNotifier.phase != BreathingPhase.complete)
+                        Text(
+                          'Total: ${_formatTime(breathingNotifier.sessionRemainingTime)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white70,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -160,14 +240,20 @@ class _BreatheScreenState extends State<BreatheScreen> {
                     if (breathingNotifier.phase == BreathingPhase.initial ||
                         breathingNotifier.phase == BreathingPhase.complete ||
                         breathingNotifier.phase == BreathingPhase.paused) {
+                      if (breathingNotifier.phase == BreathingPhase.paused) {
+                        _caretaker.addMemento(
+                          breathingNotifier.createMemento(),
+                        );
+                      }
                       breathingNotifier.start();
                     } else {
+                      _caretaker.addMemento(breathingNotifier.createMemento());
                       breathingNotifier.pause();
                     }
                   },
-                  icon: Icon(getPlayPauseIcon(breathingNotifier.phase)),
+                  icon: Icon(_getPlayPauseIcon(breathingNotifier.phase)),
                   label: Text(
-                    getCircleText(breathingNotifier.phase) == 'Paused'
+                    _getCircleText(breathingNotifier.phase) == 'Paused'
                         ? 'Resume'
                         : 'Start',
                   ),
@@ -184,57 +270,57 @@ class _BreatheScreenState extends State<BreatheScreen> {
                   ),
                 ),
                 const SizedBox(width: 20),
-                if (breathingNotifier.phase != BreathingPhase.initial &&
-                    breathingNotifier.phase != BreathingPhase.complete)
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      breathingNotifier.reset();
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Reset'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _caretaker.addMemento(breathingNotifier.createMemento());
+                    breathingNotifier.reset();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reset'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
                     ),
                   ),
+                ),
+                const SizedBox(width: 20),
+                ElevatedButton.icon(
+                  onPressed: _caretaker.canUndo()
+                      ? () {
+                          final memento = _caretaker.getLatestMemento();
+                          if (memento != null) {
+                            breathingNotifier.restoreMemento(memento);
+                            // No need to update controllers here as they are in the dialog
+                          }
+                        }
+                      : null,
+                  icon: const Icon(Icons.undo),
+                  label: const Text('Undo'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
               ],
             ),
             const Spacer(),
-            const BreatheScreenAudioPlayer(), // This widget will now handle its own visibility
+            const BreatheScreenAudioPlayer(),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildPatternButton(
-    BuildContext context,
-    String pattern,
-    BreathingNotifier notifier,
-  ) {
-    final isSelected = notifier.selectedPattern == pattern;
-    return ChoiceChip(
-      label: Text(pattern),
-      selected: isSelected,
-      selectedColor: Colors.blueAccent,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.blueAccent,
-        fontWeight: FontWeight.bold,
-      ),
-      side: const BorderSide(color: Colors.blueAccent),
-      onSelected: (selected) {
-        if (selected) {
-          notifier.setPattern(pattern);
-        }
-      },
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
     );
   }
 }

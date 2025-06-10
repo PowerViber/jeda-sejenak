@@ -160,10 +160,7 @@ class _AudioListItem extends StatelessWidget {
           track.title,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: const Text(
-          'Home - Resonance',
-          style: TextStyle(color: Colors.grey),
-        ),
+        subtitle: const Text('', style: TextStyle(color: Colors.grey)),
         trailing: isPlaying
             ? const Icon(Icons.equalizer, color: Colors.blueAccent)
             : const Icon(Icons.chevron_right, color: Colors.grey),
