@@ -5,7 +5,7 @@ import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
 import 'package:jeda_sejenak/widgets/custom_search_bar.dart';
 import 'package:jeda_sejenak/widgets/breathe_screen_audio_player.dart';
 import 'package:jeda_sejenak/services/breathing_caretaker.dart';
-import 'package:jeda_sejenak/widgets/breathing_settings_dialog.dart'; // Import the new dialog
+import 'package:jeda_sejenak/widgets/breathing_settings_dialog.dart';
 
 class BreatheScreen extends StatefulWidget {
   const BreatheScreen({super.key});
@@ -15,16 +15,10 @@ class BreatheScreen extends StatefulWidget {
 }
 
 class _BreatheScreenState extends State<BreatheScreen> {
-  // Removed all TextEditingControllers for custom patterns and session time
-  // as they are now managed within BreathingSettingsDialog
-
   final BreathingCaretaker _caretaker = BreathingCaretaker();
-
-  // No longer need initState for controller initialization as they are in dialog
 
   @override
   void dispose() {
-    // No longer need to dispose controllers here
     super.dispose();
   }
 

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
-import 'package:jeda_sejenak/models/breathing_session_config.dart'; // Import Product
-import 'package:jeda_sejenak/builders/breathing_session_config_builder.dart'; // Import Builder
+import 'package:jeda_sejenak/models/breathing_session_config.dart'; //  Product
+import 'package:jeda_sejenak/builders/breathing_session_config_builder.dart'; //  Builder
 
 class BreathingSettingsDialog extends StatefulWidget {
   const BreathingSettingsDialog({super.key});
@@ -55,11 +55,10 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
         .setTotalSessionDurationMinutes(sessionTimeMinutes)
         .build();
 
-    notifier.applyConfiguration(config); // Apply the built configuration
+    notifier.applyConfiguration(config);
     Navigator.pop(context);
   }
 
-  // --- Helper method for predefined patterns also uses the builder for consistency ---
   void _applyPredefinedPattern(String patternName, BreathingNotifier notifier) {
     final Map<String, List<int>> predefinedPatterns = {
       '4-4-6': [4, 4, 6],
@@ -69,23 +68,19 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
     if (pattern != null) {
       final int sessionTimeMinutes =
           int.tryParse(_sessionTimeController.text) ??
-          notifier.totalSessionDuration; // Keep current session time
+          notifier.totalSessionDuration;
 
       final BreathingSessionConfig config = BreathingSessionConfigBuilder()
           .setInhaleDuration(pattern[0])
           .setHoldDuration(pattern[1])
           .setExhaleDuration(pattern[2])
-          .setTotalSessionDurationMinutes(
-            sessionTimeMinutes,
-          ) // Apply existing total session duration
+          .setTotalSessionDurationMinutes(sessionTimeMinutes)
           .build();
 
       notifier.applyConfiguration(config);
-      // Update text controllers to reflect predefined pattern values
       _inhaleController.text = pattern[0].toString();
       _holdController.text = pattern[1].toString();
       _exhaleController.text = pattern[2].toString();
-      // No need to update sessionTimeController as it wasn't changed by predefined pattern
     }
   }
 
@@ -141,7 +136,6 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
             ],
           ),
           const SizedBox(height: 16),
-          // Predefined pattern buttons (now in dialog)
           Wrap(
             spacing: 10,
             children: [
@@ -158,7 +152,6 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
             ],
           ),
           const SizedBox(height: 16),
-          // Total Session Duration Input
           const Text(
             'Total Session Duration (minutes):',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -236,7 +229,7 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
       side: const BorderSide(color: Colors.blueAccent),
       onSelected: (selected) {
         if (selected) {
-          _applyPredefinedPattern(patternName, notifier); // Use the new helper
+          _applyPredefinedPattern(patternName, notifier);
         }
       },
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),

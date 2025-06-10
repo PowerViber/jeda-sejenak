@@ -24,17 +24,14 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
   Widget build(BuildContext context) {
     final audioPlayerNotifier = context.watch<AudioPlayerNotifier>();
 
-    // If no track is currently playing, don't show the player at all.
-    // The previous logic attempted to load a default, but the requirement is to hide if nothing is playing.
     if (audioPlayerNotifier.currentTrack == null) {
-      return const SizedBox.shrink(); // Hides the widget completely
+      return const SizedBox.shrink();
     }
 
-    // If a track is playing, build the UI using the current track from the notifier
     return _buildPlayerUI(
       context,
       audioPlayerNotifier,
-      audioPlayerNotifier.currentTrack!, // We know it's not null here
+      audioPlayerNotifier.currentTrack!,
       _formatDuration,
     );
   }
@@ -42,7 +39,7 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
   Widget _buildPlayerUI(
     BuildContext context,
     AudioPlayerNotifier audioPlayerNotifier,
-    AudioTrack track, // Now guaranteed to be non-null
+    AudioTrack track,
     Function(Duration) formatDuration,
   ) {
     return Container(

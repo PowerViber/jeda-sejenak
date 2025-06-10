@@ -2,13 +2,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:jeda_sejenak/models/breathing_memento.dart';
-import 'package:jeda_sejenak/models/breathing_session_config.dart'; // IMPORTANT: This import is crucial for applyConfiguration
+import 'package:jeda_sejenak/models/breathing_session_config.dart';
 
-/// Enum to define the current state of the breathing exercise.
 enum BreathingPhase { initial, inhale, hold, exhale, paused, complete }
 
-/// ChangeNotifier for managing the state and logic of the breathing exercise.
-/// Acts as the Originator for the Memento pattern.
 class BreathingNotifier extends ChangeNotifier {
   Timer? _timer;
   int _currentPhaseDuration = 0;
@@ -18,7 +15,7 @@ class BreathingNotifier extends ChangeNotifier {
   int _holdDuration = 4;
   int _exhaleDuration = 6;
 
-  int _totalSessionDurationSeconds = 120; // Default to 2 minutes (120 seconds)
+  int _totalSessionDurationSeconds = 120;
   int _sessionRemainingTimeSeconds = 120;
 
   final Map<String, List<int>> _predefinedPatterns = {
@@ -38,20 +35,17 @@ class BreathingNotifier extends ChangeNotifier {
   int get sessionRemainingTime => _sessionRemainingTimeSeconds;
   String get selectedPatternName => _selectedPatternName;
 
-  /// Applies a complete BreathingSessionConfig object to the notifier's state.
-  /// This method is designed to be used with the Builder pattern.
   void applyConfiguration(BreathingSessionConfig config) {
     _inhaleDuration = config.inhaleDuration;
     _holdDuration = config.holdDuration;
     _exhaleDuration = config.exhaleDuration;
     _totalSessionDurationSeconds = config.totalSessionDurationMinutes * 60;
-    _selectedPatternName = 'Custom'; // When applying a config, it's custom
+    _selectedPatternName = 'Custom';
 
-    reset(); // Reset to apply new configuration
+    reset();
     notifyListeners();
   }
 
-  // --- Existing methods (setCustomPattern, selectPredefinedPattern) kept for direct setting if needed ---
   void setCustomPattern(int inhale, int hold, int exhale) {
     _inhaleDuration = inhale;
     _holdDuration = hold;

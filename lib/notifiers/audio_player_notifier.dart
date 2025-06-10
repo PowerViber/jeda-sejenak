@@ -8,7 +8,7 @@ class AudioPlayerNotifier extends ChangeNotifier {
   AudioTrack? _currentTrack;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
-  bool _isPlaying = false; // Managed solely by playerStateStream
+  bool _isPlaying = false;
   double _volume = 1.0;
 
   List<AudioTrack> _playlist = [];
@@ -17,18 +17,16 @@ class AudioPlayerNotifier extends ChangeNotifier {
   AudioTrack? get currentTrack => _currentTrack;
   Duration get currentPosition => _currentPosition;
   Duration get totalDuration => _totalDuration;
-  bool get isPlaying =>
-      _isPlaying; // This getter reflects the actual player state
+  bool get isPlaying => _isPlaying;
   double get playbackProgress => _totalDuration.inMilliseconds > 0
       ? _currentPosition.inMilliseconds / _totalDuration.inMilliseconds
       : 0.0;
   double get volume => _volume;
 
   AudioPlayerNotifier() {
-    // Rely solely on playerStateStream for _isPlaying updates
     _audioPlayer.playerStateStream.listen((playerState) {
       _isPlaying = playerState.playing;
-      notifyListeners(); // Notify UI ONLY when the actual player state changes
+      notifyListeners();
     });
 
     _audioPlayer.positionStream.listen((position) {
@@ -75,10 +73,9 @@ class AudioPlayerNotifier extends ChangeNotifier {
     } else {
       await _audioPlayer.stop();
       _currentTrack = null;
-      // _isPlaying will be updated by playerStateStream to false
       _currentPosition = Duration.zero;
       _totalDuration = Duration.zero;
-      notifyListeners(); // Notify for track change, duration, position
+      notifyListeners();
     }
   }
 
@@ -86,15 +83,13 @@ class AudioPlayerNotifier extends ChangeNotifier {
     try {
       if (_currentTrack?.id != track.id) {
         await _audioPlayer.setAsset(track.filePath);
-        _currentTrack = track; // Update current track immediately
+        _currentTrack = track;
       }
       await _audioPlayer.play();
-      // _isPlaying will be updated by playerStateStream
     } catch (e) {
       print("Error playing audio: $e");
-      // _isPlaying will be updated by playerStateStream
     } finally {
-      notifyListeners(); // Notify for track change
+      notifyListeners();
     }
   }
 
@@ -114,19 +109,14 @@ class AudioPlayerNotifier extends ChangeNotifier {
 
   Future<void> pause() async {
     await _audioPlayer.pause();
-    // Removed direct _isPlaying update and notifyListeners() here.
-    // playerStateStream will handle it.
   }
 
   Future<void> resume() async {
     await _audioPlayer.play();
-    // Removed direct _isPlaying update and notifyListeners() here.
-    // playerStateStream will handle it.
   }
 
   Future<void> togglePlayPause() async {
     if (_audioPlayer.playing) {
-      // Check player's actual state
       await pause();
     } else {
       await resume();
