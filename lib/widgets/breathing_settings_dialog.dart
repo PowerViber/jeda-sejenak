@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
-import 'package:jeda_sejenak/models/breathing_session_config.dart'; //  Product
-import 'package:jeda_sejenak/builders/breathing_session_config_builder.dart'; //  Builder
+import 'package:jeda_sejenak/models/breathing_session_config.dart';
+import 'package:jeda_sejenak/builders/breathing_session_config_builder.dart';
+import 'package:jeda_sejenak/notifiers/app_settings_notifier.dart'; // Import AppSettingsNotifier
 
 class BreathingSettingsDialog extends StatefulWidget {
   const BreathingSettingsDialog({super.key});
@@ -18,16 +19,23 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
   final TextEditingController _inhaleController = TextEditingController();
   final TextEditingController _holdController = TextEditingController();
   final TextEditingController _exhaleController = TextEditingController();
-  final TextEditingController _sessionTimeController = TextEditingController();
+  final TextEditingController _cycleCountController =
+      TextEditingController(); // Changed from sessionTimeController
 
   @override
   void initState() {
     super.initState();
     final notifier = Provider.of<BreathingNotifier>(context, listen: false);
+    final appSettings = Provider.of<AppSettingsNotifier>(
+      context,
+      listen: false,
+    ); // Get AppSettings
+
     _inhaleController.text = notifier.inhaleDuration.toString();
     _holdController.text = notifier.holdDuration.toString();
     _exhaleController.text = notifier.exhaleDuration.toString();
-    _sessionTimeController.text = notifier.totalSessionDuration.toString();
+    _cycleCountController.text = appSettings.breathingCycleCount
+        .toString(); // Use count from AppSettings
   }
 
   @override
@@ -35,27 +43,36 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
     _inhaleController.dispose();
     _holdController.dispose();
     _exhaleController.dispose();
-    _sessionTimeController.dispose();
+    _cycleCountController.dispose(); // Changed
     super.dispose();
   }
 
   void _applySettings() {
     final notifier = Provider.of<BreathingNotifier>(context, listen: false);
+    final appSettings = Provider.of<AppSettingsNotifier>(
+      context,
+      listen: false,
+    );
 
     int inhale = int.tryParse(_inhaleController.text) ?? 0;
     int hold = int.tryParse(_holdController.text) ?? 0;
     int exhale = int.tryParse(_exhaleController.text) ?? 0;
-    int sessionTimeMinutes = int.tryParse(_sessionTimeController.text) ?? 0;
+    int totalCycles = int.tryParse(_cycleCountController.text) ?? 0; // Changed
 
-    // --- Using the Builder Pattern here ---
+    // Update AppSettingsNotifier
+    appSettings.setBreathingCycleCount(totalCycles);
+
+    // Using the Builder Pattern here
     final BreathingSessionConfig config = BreathingSessionConfigBuilder()
         .setInhaleDuration(inhale)
         .setHoldDuration(hold)
         .setExhaleDuration(exhale)
-        .setTotalSessionDurationMinutes(sessionTimeMinutes)
+        .setTotalCycles(totalCycles) // Changed
         .build();
 
-    notifier.applyConfiguration(config);
+    notifier.applyConfiguration(
+      config,
+    ); // Apply the built configuration to BreathingNotifier
     Navigator.pop(context);
   }
 
@@ -66,18 +83,23 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
     };
     final pattern = predefinedPatterns[patternName];
     if (pattern != null) {
-      final int sessionTimeMinutes =
-          int.tryParse(_sessionTimeController.text) ??
-          notifier.totalSessionDuration;
+      final appSettings = Provider.of<AppSettingsNotifier>(
+        context,
+        listen: false,
+      );
+      final int totalCycles =
+          int.tryParse(_cycleCountController.text) ??
+          appSettings.breathingCycleCount; // Keep current cycle count
 
       final BreathingSessionConfig config = BreathingSessionConfigBuilder()
           .setInhaleDuration(pattern[0])
           .setHoldDuration(pattern[1])
           .setExhaleDuration(pattern[2])
-          .setTotalSessionDurationMinutes(sessionTimeMinutes)
+          .setTotalCycles(totalCycles) // Changed
           .build();
 
       notifier.applyConfiguration(config);
+      // Update text controllers in dialog to reflect selected predefined pattern
       _inhaleController.text = pattern[0].toString();
       _holdController.text = pattern[1].toString();
       _exhaleController.text = pattern[2].toString();
@@ -86,7 +108,8 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final breathingNotifier = context.watch<BreathingNotifier>();
+    final breathingNotifier = context
+        .watch<BreathingNotifier>(); // To react to predefined pattern changes
 
     return Padding(
       padding: EdgeInsets.only(
@@ -136,6 +159,7 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
             ],
           ),
           const SizedBox(height: 16),
+          // Predefined pattern buttons (now in dialog)
           Wrap(
             spacing: 10,
             children: [
@@ -152,17 +176,18 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
             ],
           ),
           const SizedBox(height: 16),
+          // Total Cycle Count Input
           const Text(
-            'Total Session Duration (minutes):',
+            'Total Cycles per Session:', // Changed text
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 10),
           TextField(
-            controller: _sessionTimeController,
+            controller: _cycleCountController, // Changed controller
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
-              labelText: 'Minutes',
+              labelText: 'Cycles', // Changed label
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
               ),

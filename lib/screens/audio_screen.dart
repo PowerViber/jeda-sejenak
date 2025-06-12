@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/audio_player_notifier.dart';
+import 'package:jeda_sejenak/notifiers/app_settings_notifier.dart';
 import 'package:jeda_sejenak/models/audio_track.dart';
 import 'package:jeda_sejenak/services/sound_library.dart';
 import 'package:jeda_sejenak/widgets/custom_search_bar.dart';
@@ -14,17 +15,25 @@ class AudioScreen extends StatefulWidget {
 }
 
 class _AudioScreenState extends State<AudioScreen> {
-  late Future<List<AudioTrack>> _audioTracksFuture;
-  List<AudioTrack> _allAudioTracks = [];
+  late Future<List<AudioTrack>>
+  _allAudioTracksFuture; // This is used once to initialize AppSettingsNotifier
 
   @override
   void initState() {
     super.initState();
-    _audioTracksFuture = SoundLibrary.getAvailableSounds();
-    _audioTracksFuture.then((tracks) {
-      setState(() {
-        _allAudioTracks = tracks;
-      });
+    _allAudioTracksFuture = SoundLibrary.getAvailableSounds();
+    _allAudioTracksFuture.then((tracks) {
+      final appSettingsNotifier = Provider.of<AppSettingsNotifier>(
+        context,
+        listen: false,
+      );
+      // Initialize AppSettingsNotifier with all available tracks
+      appSettingsNotifier.initializeAllAvailableTracks(tracks);
+      // Set the playlist for AudioPlayerNotifier based on the user's active playlist
+      Provider.of<AudioPlayerNotifier>(context, listen: false).setAudioPlaylist(
+        appSettingsNotifier.userPlaylist,
+        initialTrackId: appSettingsNotifier.defaultAudioTrackId,
+      );
     });
   }
 
@@ -38,6 +47,8 @@ class _AudioScreenState extends State<AudioScreen> {
   @override
   Widget build(BuildContext context) {
     final audioPlayerNotifier = context.watch<AudioPlayerNotifier>();
+    final appSettingsNotifier = context
+        .watch<AppSettingsNotifier>(); // Watch AppSettings for user playlist
 
     return Scaffold(
       appBar: AppBar(title: const Text('Audio')),
@@ -70,24 +81,18 @@ class _AudioScreenState extends State<AudioScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          // Now displaying from appSettingsNotifier.userPlaylist
           Expanded(
-            child: FutureBuilder<List<AudioTrack>>(
-              future: _audioTracksFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                    child: Text('No audio tracks found in assets/audio/.'),
-                  );
-                } else {
-                  final List<AudioTrack> audioTracks = snapshot.data!;
-                  return ListView.builder(
-                    itemCount: audioTracks.length,
+            child: appSettingsNotifier.userPlaylist.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Your playlist is empty. Add music in Settings > My Playlist.',
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: appSettingsNotifier.userPlaylist.length,
                     itemBuilder: (context, index) {
-                      final track = audioTracks[index];
+                      final track = appSettingsNotifier.userPlaylist[index];
                       final isPlayingThisTrack =
                           audioPlayerNotifier.currentTrack?.id == track.id &&
                           audioPlayerNotifier.isPlaying;
@@ -96,22 +101,17 @@ class _AudioScreenState extends State<AudioScreen> {
                         track: track,
                         isPlaying: isPlayingThisTrack,
                         onTap: () async {
-                          await audioPlayerNotifier.setPlaylistAndPlay(
-                            audioTracks,
-                            initialTrack: track,
-                          );
+                          await audioPlayerNotifier.playTrack(track);
                         },
                       );
                     },
-                  );
-                }
-              },
-            ),
+                  ),
           ),
           if (audioPlayerNotifier.currentTrack != null)
             _NowPlayingBar(
               audioPlayerNotifier: audioPlayerNotifier,
               formatDuration: _formatDuration,
+              appSettingsNotifier: appSettingsNotifier,
             ),
           const SizedBox(height: 16),
         ],
@@ -160,7 +160,10 @@ class _AudioListItem extends StatelessWidget {
           track.title,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: const Text('', style: TextStyle(color: Colors.grey)),
+        subtitle: const Text(
+          'Home - Resonance',
+          style: TextStyle(color: Colors.grey),
+        ),
         trailing: isPlaying
             ? const Icon(Icons.equalizer, color: Colors.blueAccent)
             : const Icon(Icons.chevron_right, color: Colors.grey),
@@ -172,10 +175,12 @@ class _AudioListItem extends StatelessWidget {
 
 class _NowPlayingBar extends StatelessWidget {
   final AudioPlayerNotifier audioPlayerNotifier;
+  final AppSettingsNotifier appSettingsNotifier;
   final Function(Duration) formatDuration;
 
   const _NowPlayingBar({
     required this.audioPlayerNotifier,
+    required this.appSettingsNotifier,
     required this.formatDuration,
   });
 
@@ -222,7 +227,7 @@ class _NowPlayingBar extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '',
+                      'Home - Resonance',
                       style: TextStyle(color: Colors.grey[700], fontSize: 13),
                     ),
                   ],
@@ -237,13 +242,33 @@ class _NowPlayingBar extends StatelessWidget {
                 icon: const Icon(Icons.skip_previous),
                 iconSize: 40,
                 color: Colors.blueAccent,
-                onPressed: audioPlayerNotifier.playPrevious,
+                onPressed: () async {
+                  await audioPlayerNotifier.playPrevious();
+                  // Update currentTrack based on what JustAudio is now playing
+                  if (audioPlayerNotifier.audioPlayer.currentIndex != null) {
+                    final newCurrentIndex =
+                        audioPlayerNotifier.audioPlayer.currentIndex!;
+                    final newTrackId =
+                        (audioPlayerNotifier.audioPlayer.sequence
+                                ?.elementAt(newCurrentIndex)
+                                ?.tag
+                            as String?);
+                    final newTrack = appSettingsNotifier.allAvailableTracks
+                        .firstWhere(
+                          (track) => track.id == newTrackId,
+                          orElse: () => null as AudioTrack,
+                        );
+                    if (newTrack != null) {
+                      audioPlayerNotifier.updateCurrentTrack(newTrack);
+                    }
+                  }
+                },
               ),
               IconButton(
                 icon: Icon(
                   audioPlayerNotifier.isPlaying
                       ? Icons.pause_circle_filled
-                      : Icons.play_circle_fill,
+                      : Icons.play_circle_filled,
                 ),
                 iconSize: 56,
                 color: Colors.blueAccent,
@@ -253,7 +278,26 @@ class _NowPlayingBar extends StatelessWidget {
                 icon: const Icon(Icons.skip_next),
                 iconSize: 40,
                 color: Colors.blueAccent,
-                onPressed: audioPlayerNotifier.playNext,
+                onPressed: () async {
+                  await audioPlayerNotifier.playNext();
+                  if (audioPlayerNotifier.audioPlayer.currentIndex != null) {
+                    final newCurrentIndex =
+                        audioPlayerNotifier.audioPlayer.currentIndex!;
+                    final newTrackId =
+                        (audioPlayerNotifier.audioPlayer.sequence
+                                ?.elementAt(newCurrentIndex)
+                                ?.tag
+                            as String?);
+                    final newTrack = appSettingsNotifier.allAvailableTracks
+                        .firstWhere(
+                          (track) => track.id == newTrackId,
+                          orElse: () => null as AudioTrack,
+                        );
+                    if (newTrack != null) {
+                      audioPlayerNotifier.updateCurrentTrack(newTrack);
+                    }
+                  }
+                },
               ),
             ],
           ),
@@ -292,10 +336,7 @@ class _NowPlayingBar extends StatelessWidget {
             ),
           ),
           Padding(
-            // Added padding here
-            padding: const EdgeInsets.symmetric(
-              horizontal: 4.0,
-            ), // Adjust padding as desired
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: Row(
               children: [
                 Icon(

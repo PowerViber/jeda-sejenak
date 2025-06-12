@@ -1,11 +1,13 @@
 // --- lib/screens/breathe_screen.dart ---
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For TextInputFormatter
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
 import 'package:jeda_sejenak/widgets/custom_search_bar.dart';
 import 'package:jeda_sejenak/widgets/breathe_screen_audio_player.dart';
 import 'package:jeda_sejenak/services/breathing_caretaker.dart';
-import 'package:jeda_sejenak/widgets/breathing_settings_dialog.dart';
+import 'package:jeda_sejenak/models/breathing_memento.dart';
+// Removed import for BreathingSettingsDialog as it's not called directly here anymore
 
 class BreatheScreen extends StatefulWidget {
   const BreatheScreen({super.key});
@@ -15,10 +17,13 @@ class BreatheScreen extends StatefulWidget {
 }
 
 class _BreatheScreenState extends State<BreatheScreen> {
+  // Removed TextEditingControllers as settings are moved
+
   final BreathingCaretaker _caretaker = BreathingCaretaker();
 
   @override
   void dispose() {
+    // No controllers to dispose here anymore
     super.dispose();
   }
 
@@ -78,22 +83,7 @@ class _BreatheScreenState extends State<BreatheScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Jeda Sejenak'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                builder: (context) =>
-                    const BreathingSettingsDialog(), // Use the new dialog
-              );
-            },
-          ),
-        ],
+        // Removed actions here (settings icon moved to MainScreen)
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -102,7 +92,7 @@ class _BreatheScreenState extends State<BreatheScreen> {
             const CustomSearchBar(),
             const SizedBox(height: 16),
 
-            // Display current pattern and total duration for user info
+            // Display current pattern and total cycles for user info
             Card(
               margin: const EdgeInsets.only(bottom: 16),
               elevation: 2,
@@ -130,8 +120,9 @@ class _BreatheScreenState extends State<BreatheScreen> {
                         ),
                       ),
                     const SizedBox(height: 8),
+                    // Display cycles instead of total duration
                     Text(
-                      'Session Duration: ${breathingNotifier.totalSessionDuration} minutes',
+                      'Total Cycles: ${breathingNotifier.totalCycles}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -191,7 +182,9 @@ class _BreatheScreenState extends State<BreatheScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _formatTime(breathingNotifier.currentPhaseDuration),
+                        _formatTime(
+                          breathingNotifier.currentPhaseDuration,
+                        ), // Still uses seconds for phase
                         style: const TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
@@ -208,10 +201,11 @@ class _BreatheScreenState extends State<BreatheScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      // Display remaining cycles
                       if (breathingNotifier.phase != BreathingPhase.initial &&
                           breathingNotifier.phase != BreathingPhase.complete)
                         Text(
-                          'Total: ${_formatTime(breathingNotifier.sessionRemainingTime)}',
+                          'Cycles: ${breathingNotifier.cyclesRemaining}', // Now displays remaining cycles
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,

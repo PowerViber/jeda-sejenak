@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/audio_player_notifier.dart';
+import 'package:jeda_sejenak/notifiers/app_settings_notifier.dart';
 import 'package:jeda_sejenak/models/audio_track.dart';
 
 class BreatheScreenAudioPlayer extends StatefulWidget {
@@ -21,8 +22,37 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appSettingsNotifier = Provider.of<AppSettingsNotifier>(
+        context,
+        listen: false,
+      );
+      final audioPlayerNotifier = Provider.of<AudioPlayerNotifier>(
+        context,
+        listen: false,
+      );
+
+      // If no track is currently set in the audio player, try to play the default one
+      // from AppSettingsNotifier's user playlist
+      if (audioPlayerNotifier.currentTrack == null &&
+          appSettingsNotifier.defaultAudioTrackId != null) {
+        final defaultTrack = appSettingsNotifier.userPlaylist.firstWhere(
+          (track) => track.id == appSettingsNotifier.defaultAudioTrackId,
+          orElse: () => null as AudioTrack,
+        );
+        if (defaultTrack != null) {
+          audioPlayerNotifier.playTrack(defaultTrack);
+        }
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final audioPlayerNotifier = context.watch<AudioPlayerNotifier>();
+    final appSettingsNotifier = context.watch<AppSettingsNotifier>();
 
     if (audioPlayerNotifier.currentTrack == null) {
       return const SizedBox.shrink();
@@ -31,6 +61,7 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
     return _buildPlayerUI(
       context,
       audioPlayerNotifier,
+      appSettingsNotifier,
       audioPlayerNotifier.currentTrack!,
       _formatDuration,
     );
@@ -39,6 +70,7 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
   Widget _buildPlayerUI(
     BuildContext context,
     AudioPlayerNotifier audioPlayerNotifier,
+    AppSettingsNotifier appSettingsNotifier,
     AudioTrack track,
     Function(Duration) formatDuration,
   ) {
@@ -92,7 +124,7 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const Text(
-                      '',
+                      'Home - Resonance',
                       style: TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   ],
@@ -107,13 +139,32 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
                 icon: const Icon(Icons.skip_previous),
                 iconSize: 40,
                 color: Colors.blueAccent,
-                onPressed: audioPlayerNotifier.playPrevious,
+                onPressed: () async {
+                  await audioPlayerNotifier.playPrevious();
+                  if (audioPlayerNotifier.audioPlayer.currentIndex != null) {
+                    final newCurrentIndex =
+                        audioPlayerNotifier.audioPlayer.currentIndex!;
+                    final newTrackId =
+                        (audioPlayerNotifier.audioPlayer.sequence
+                                ?.elementAt(newCurrentIndex)
+                                ?.tag
+                            as String?);
+                    final newTrack = appSettingsNotifier.allAvailableTracks
+                        .firstWhere(
+                          (t) => t.id == newTrackId,
+                          orElse: () => null as AudioTrack,
+                        );
+                    if (newTrack != null) {
+                      audioPlayerNotifier.updateCurrentTrack(newTrack);
+                    }
+                  }
+                },
               ),
               IconButton(
                 icon: Icon(
                   audioPlayerNotifier.isPlaying
                       ? Icons.pause_circle_filled
-                      : Icons.play_circle_fill,
+                      : Icons.play_circle_filled,
                 ),
                 iconSize: 56,
                 color: Colors.blueAccent,
@@ -123,7 +174,26 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
                 icon: const Icon(Icons.skip_next),
                 iconSize: 40,
                 color: Colors.blueAccent,
-                onPressed: audioPlayerNotifier.playNext,
+                onPressed: () async {
+                  await audioPlayerNotifier.playNext();
+                  if (audioPlayerNotifier.audioPlayer.currentIndex != null) {
+                    final newCurrentIndex =
+                        audioPlayerNotifier.audioPlayer.currentIndex!;
+                    final newTrackId =
+                        (audioPlayerNotifier.audioPlayer.sequence
+                                ?.elementAt(newCurrentIndex)
+                                ?.tag
+                            as String?);
+                    final newTrack = appSettingsNotifier.allAvailableTracks
+                        .firstWhere(
+                          (t) => t.id == newTrackId,
+                          orElse: () => null as AudioTrack,
+                        );
+                    if (newTrack != null) {
+                      audioPlayerNotifier.updateCurrentTrack(newTrack);
+                    }
+                  }
+                },
               ),
             ],
           ),
@@ -139,7 +209,7 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
               value: audioPlayerNotifier.currentPosition.inMilliseconds
                   .toDouble(),
               activeColor: Colors.blueAccent,
-              inactiveColor: Colors.grey[300],
+              inactiveColor: Colors.blueAccent.withOpacity(0.3),
               onChanged: (value) {
                 audioPlayerNotifier.seek(Duration(milliseconds: value.toInt()));
               },
@@ -162,10 +232,7 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
             ),
           ),
           Padding(
-            // Added padding here
-            padding: const EdgeInsets.symmetric(
-              horizontal: 4.0,
-            ), // Adjust padding as desired
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: Row(
               children: [
                 Icon(

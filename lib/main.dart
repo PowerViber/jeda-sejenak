@@ -1,13 +1,14 @@
-// lib/main.dart
-
+// --- lib/main.dart ---
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'package:jeda_sejenak/screens/breathe_screen.dart';
 import 'package:jeda_sejenak/screens/audio_screen.dart';
-// import 'package:jeda_sejenak/screens/quotes_screen.dart';
-// import 'package:jeda_sejenak/screens/profile_screen.dart';
+import 'package:jeda_sejenak/screens/settings_screen.dart';
+
 import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
 import 'package:jeda_sejenak/notifiers/audio_player_notifier.dart';
+import 'package:jeda_sejenak/notifiers/app_settings_notifier.dart';
 
 void main() {
   runApp(
@@ -15,6 +16,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => BreathingNotifier()),
         ChangeNotifierProvider(create: (_) => AudioPlayerNotifier()),
+        ChangeNotifierProvider(create: (_) => AppSettingsNotifier()),
       ],
       child: const MyApp(),
     ),
@@ -60,11 +62,11 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
+  // Updated list of screens for BottomNavigationBar
   static const List<Widget> _widgetOptions = <Widget>[
     BreatheScreen(),
     AudioScreen(),
-    // QuotesScreen(),
-    // ProfileScreen(),
+    SettingsScreen(), // Now directly accessible
   ];
 
   void _onItemTapped(int index) {
@@ -76,6 +78,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text('Jeda Sejenak')),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -109,12 +112,8 @@ class _MainScreenState extends State<MainScreen> {
                 label: 'Audio',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.format_quote),
-                label: 'Quotes',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Profile',
+                icon: Icon(Icons.settings), // Settings icon
+                label: 'Settings',
               ),
             ],
             currentIndex: _selectedIndex,
