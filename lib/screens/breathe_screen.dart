@@ -1,6 +1,6 @@
 // --- lib/screens/breathe_screen.dart ---
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For TextInputFormatter
+import 'package:flutter/services.dart'; // Still imported but not directly used for input fields here
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
 import 'package:jeda_sejenak/widgets/custom_search_bar.dart';
@@ -17,13 +17,10 @@ class BreatheScreen extends StatefulWidget {
 }
 
 class _BreatheScreenState extends State<BreatheScreen> {
-  // Removed TextEditingControllers as settings are moved
-
   final BreathingCaretaker _caretaker = BreathingCaretaker();
 
   @override
   void dispose() {
-    // No controllers to dispose here anymore
     super.dispose();
   }
 
@@ -76,14 +73,38 @@ class _BreatheScreenState extends State<BreatheScreen> {
     return Icons.pause;
   }
 
+  Widget _buildPredefinedPatternButton(
+    BuildContext context,
+    String patternName,
+    BreathingNotifier notifier,
+  ) {
+    final isSelected = notifier.selectedPatternName == patternName;
+    return ChoiceChip(
+      label: Text(patternName),
+      selected: isSelected,
+      selectedColor: Colors.blueAccent,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.blueAccent,
+        fontWeight: FontWeight.bold,
+      ),
+      side: const BorderSide(color: Colors.blueAccent),
+      onSelected: (selected) {
+        if (selected) {
+          notifier.selectPredefinedPattern(patternName);
+        }
+      },
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final breathingNotifier = context.watch<BreathingNotifier>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Jeda Sejenak'),
-        // Removed actions here (settings icon moved to MainScreen)
+        title: const Text('Breathing'),
+        // Removed actions: [...] here
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -111,7 +132,8 @@ class _BreatheScreenState extends State<BreatheScreen> {
                         fontSize: 16,
                       ),
                     ),
-                    if (breathingNotifier.selectedPatternName == 'Custom')
+                    if (breathingNotifier.selectedPatternName != '4-4-6' &&
+                        breathingNotifier.selectedPatternName != '4-7-8')
                       Text(
                         '(${breathingNotifier.inhaleDuration}-${breathingNotifier.holdDuration}-${breathingNotifier.exhaleDuration})',
                         style: const TextStyle(
@@ -120,7 +142,6 @@ class _BreatheScreenState extends State<BreatheScreen> {
                         ),
                       ),
                     const SizedBox(height: 8),
-                    // Display cycles instead of total duration
                     Text(
                       'Total Cycles: ${breathingNotifier.totalCycles}',
                       style: const TextStyle(
@@ -131,6 +152,24 @@ class _BreatheScreenState extends State<BreatheScreen> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 16),
+
+            // Pattern selection buttons (reintroduced)
+            Wrap(
+              spacing: 10,
+              children: [
+                _buildPredefinedPatternButton(
+                  context,
+                  '4-4-6',
+                  breathingNotifier,
+                ),
+                _buildPredefinedPatternButton(
+                  context,
+                  '4-7-8',
+                  breathingNotifier,
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
@@ -182,9 +221,7 @@ class _BreatheScreenState extends State<BreatheScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _formatTime(
-                          breathingNotifier.currentPhaseDuration,
-                        ), // Still uses seconds for phase
+                        _formatTime(breathingNotifier.currentPhaseDuration),
                         style: const TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
@@ -201,11 +238,10 @@ class _BreatheScreenState extends State<BreatheScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Display remaining cycles
                       if (breathingNotifier.phase != BreathingPhase.initial &&
                           breathingNotifier.phase != BreathingPhase.complete)
                         Text(
-                          'Cycles: ${breathingNotifier.cyclesRemaining}', // Now displays remaining cycles
+                          'Cycles: ${breathingNotifier.cyclesRemaining}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -282,7 +318,6 @@ class _BreatheScreenState extends State<BreatheScreen> {
                           final memento = _caretaker.getLatestMemento();
                           if (memento != null) {
                             breathingNotifier.restoreMemento(memento);
-                            // No need to update controllers here as they are in the dialog
                           }
                         }
                       : null,

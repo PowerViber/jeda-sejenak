@@ -42,9 +42,7 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
           (track) => track.id == appSettingsNotifier.defaultAudioTrackId,
           orElse: () => null as AudioTrack,
         );
-        if (defaultTrack != null) {
-          audioPlayerNotifier.playTrack(defaultTrack);
-        }
+        audioPlayerNotifier.playTrack(defaultTrack);
       }
     });
   }
@@ -147,16 +145,14 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
                     final newTrackId =
                         (audioPlayerNotifier.audioPlayer.sequence
                                 ?.elementAt(newCurrentIndex)
-                                ?.tag
+                                .tag
                             as String?);
                     final newTrack = appSettingsNotifier.allAvailableTracks
                         .firstWhere(
                           (t) => t.id == newTrackId,
                           orElse: () => null as AudioTrack,
                         );
-                    if (newTrack != null) {
-                      audioPlayerNotifier.updateCurrentTrack(newTrack);
-                    }
+                    audioPlayerNotifier.updateCurrentTrack(newTrack);
                   }
                 },
               ),
@@ -182,16 +178,14 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
                     final newTrackId =
                         (audioPlayerNotifier.audioPlayer.sequence
                                 ?.elementAt(newCurrentIndex)
-                                ?.tag
+                                .tag
                             as String?);
                     final newTrack = appSettingsNotifier.allAvailableTracks
                         .firstWhere(
                           (t) => t.id == newTrackId,
                           orElse: () => null as AudioTrack,
                         );
-                    if (newTrack != null) {
-                      audioPlayerNotifier.updateCurrentTrack(newTrack);
-                    }
+                    audioPlayerNotifier.updateCurrentTrack(newTrack);
                   }
                 },
               ),

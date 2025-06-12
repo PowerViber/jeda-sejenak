@@ -1,24 +1,18 @@
 // --- lib/models/breathing_session_config.dart ---
-import 'package:jeda_sejenak/builders/breathing_session_config_builder.dart';
 
 /// The Product: Represents a complete configuration for a breathing session.
 /// This object is designed to be immutable once built.
 class BreathingSessionConfig {
-  final int inhaleDuration;
-  final int holdDuration;
-  final int exhaleDuration;
-  final int totalCycles; // Changed from totalSessionDurationMinutes
+  // Removed inhaleDuration, holdDuration, exhaleDuration from here
+  final int totalCycles; // Now solely holds total cycles
 
   // Private constructor, only accessible by the builder
   BreathingSessionConfig.builder({
-    required this.inhaleDuration,
-    required this.holdDuration,
-    required this.exhaleDuration,
-    required this.totalCycles, // Changed
+    required this.totalCycles, // Only totalCycles is required from builder
   });
 
   @override
   String toString() {
-    return 'BreathingSessionConfig(inhale: $inhaleDuration, hold: $holdDuration, exhale: $exhaleDuration, totalCycles: $totalCycles)';
+    return 'BreathingSessionConfig(totalCycles: $totalCycles)';
   }
 }

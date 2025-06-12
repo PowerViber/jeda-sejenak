@@ -251,16 +251,14 @@ class _NowPlayingBar extends StatelessWidget {
                     final newTrackId =
                         (audioPlayerNotifier.audioPlayer.sequence
                                 ?.elementAt(newCurrentIndex)
-                                ?.tag
+                                .tag
                             as String?);
                     final newTrack = appSettingsNotifier.allAvailableTracks
                         .firstWhere(
                           (track) => track.id == newTrackId,
                           orElse: () => null as AudioTrack,
                         );
-                    if (newTrack != null) {
-                      audioPlayerNotifier.updateCurrentTrack(newTrack);
-                    }
+                    audioPlayerNotifier.updateCurrentTrack(newTrack);
                   }
                 },
               ),
@@ -286,16 +284,14 @@ class _NowPlayingBar extends StatelessWidget {
                     final newTrackId =
                         (audioPlayerNotifier.audioPlayer.sequence
                                 ?.elementAt(newCurrentIndex)
-                                ?.tag
+                                .tag
                             as String?);
                     final newTrack = appSettingsNotifier.allAvailableTracks
                         .firstWhere(
                           (track) => track.id == newTrackId,
                           orElse: () => null as AudioTrack,
                         );
-                    if (newTrack != null) {
-                      audioPlayerNotifier.updateCurrentTrack(newTrack);
-                    }
+                    audioPlayerNotifier.updateCurrentTrack(newTrack);
                   }
                 },
               ),

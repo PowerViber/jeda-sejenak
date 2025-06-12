@@ -19,7 +19,6 @@ class BreathingNotifier extends ChangeNotifier {
   int _holdDuration = 4;
   int _exhaleDuration = 6;
 
-  // New: Manage total cycles and remaining cycles
   int _totalCycles = 5; // Default to 5 cycles
   int _cyclesRemaining = 5; // Will count down from _totalCycles
 
@@ -36,26 +35,19 @@ class BreathingNotifier extends ChangeNotifier {
   int get holdDuration => _holdDuration;
   int get exhaleDuration => _exhaleDuration;
 
-  // Getter for total cycles (for UI display)
   int get totalCycles => _totalCycles;
-  // Getter for remaining cycles (for UI display)
   int get cyclesRemaining => _cyclesRemaining;
   String get selectedPatternName => _selectedPatternName;
 
-  /// Applies a complete BreathingSessionConfig object to the notifier's state.
-  /// This method is designed to be used with the Builder pattern.
+  /// Applies a complete BreathingSessionConfig object (which now only contains totalCycles)
+  /// to the notifier's state. Pattern selection is handled separately by selectPredefinedPattern.
   void applyConfiguration(BreathingSessionConfig config) {
-    _inhaleDuration = config.inhaleDuration;
-    _holdDuration = config.holdDuration;
-    _exhaleDuration = config.exhaleDuration;
     _totalCycles = config.totalCycles; // Apply cycles from config
-    _selectedPatternName = 'Custom'; // When applying a config, it's custom
-
-    reset(); // Reset to apply new configuration
+    _cyclesRemaining = _totalCycles; // Reset remaining cycles
+    reset(); // Resetting will apply new cycles and restart the session if needed
     notifyListeners();
   }
 
-  // New method: set total cycles directly (used by BreathingCycleSettingsScreen)
   void setTotalCycles(int count) {
     _totalCycles = count;
     _cyclesRemaining = count; // Reset remaining cycles
@@ -63,17 +55,7 @@ class BreathingNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- Existing methods (setCustomPattern, selectPredefinedPattern) kept for direct setting if needed ---
-  // Note: These will now directly affect inhale/hold/exhale, but total cycles is separate.
-  void setCustomPattern(int inhale, int hold, int exhale) {
-    _inhaleDuration = inhale;
-    _holdDuration = hold;
-    _exhaleDuration = exhale;
-    _selectedPatternName = 'Custom';
-    reset();
-    notifyListeners();
-  }
-
+  /// Selects a predefined pattern and updates the inhale/hold/exhale durations.
   void selectPredefinedPattern(String patternName) {
     final pattern = _predefinedPatterns[patternName];
     if (pattern != null) {
@@ -81,7 +63,7 @@ class BreathingNotifier extends ChangeNotifier {
       _holdDuration = pattern[1];
       _exhaleDuration = pattern[2];
       _selectedPatternName = patternName;
-      reset();
+      reset(); // Reset to apply new pattern durations
       notifyListeners();
     }
   }
@@ -94,54 +76,100 @@ class BreathingNotifier extends ChangeNotifier {
       inhaleDuration: _inhaleDuration,
       holdDuration: _holdDuration,
       exhaleDuration: _exhaleDuration,
-      cyclesRemaining: _cyclesRemaining, // <--- IMPORTANT: Pass this argument
-      totalCyclesAtCapture: _totalCycles, // <--- IMPORTANT: Pass this argument
+      cyclesRemaining: _cyclesRemaining,
+      totalCyclesAtCapture: _totalCycles,
     );
   }
 
+  /// Originator method: Restores the state from a Memento,
+  /// and applies the custom "cycle control" logic based on the memento's phase.
   void restoreMemento(BreathingMemento memento) {
-    _timer?.cancel();
-    _currentPhaseDuration = memento.currentDuration;
+    _timer?.cancel(); // Ensure any existing timer is canceled FIRST
+
+    // 1. Restore pattern and phase durations from memento (base state)
     _selectedPatternName = memento.selectedPattern;
     _inhaleDuration = memento.inhaleDuration;
     _holdDuration = memento.holdDuration;
     _exhaleDuration = memento.exhaleDuration;
-    _cyclesRemaining = memento.cyclesRemaining; // Restore remaining cycles
-    _totalCycles = memento.totalCyclesAtCapture; // Restore total cycles
 
-    _phase = BreathingPhase.values.firstWhere(
+    // Restore cycle counts from memento first (representing state when memento was saved)
+    _totalCycles =
+        memento.totalCyclesAtCapture; // This is the user's set total cycles
+    _cyclesRemaining = memento.cyclesRemaining;
+
+    // Convert string back to enum
+    final restoredPhase = BreathingPhase.values.firstWhere(
       (e) => e.toString() == memento.phase,
       orElse: () => BreathingPhase.initial,
     );
 
-    if (_phase != BreathingPhase.initial && _phase != BreathingPhase.complete) {
-      _startPhase(_currentPhaseDuration, _phase);
+    // 2. Apply the custom "cycle control" logic based on the RESTORED phase
+    switch (restoredPhase) {
+      case BreathingPhase.hold:
+      case BreathingPhase.exhale:
+      case BreathingPhase.paused:
+        // If undoing from hold/exhale/paused, rewind to inhale of the *same* cycle.
+        // No change to _totalCycles or _cyclesRemaining.
+        _currentPhaseDuration = _inhaleDuration;
+        _phase = BreathingPhase.inhale;
+        break;
+      case BreathingPhase.inhale:
+        // If undoing from inhale, check if we can "give back" a cycle.
+        // A cycle can be given back if _cyclesRemaining is less than the _totalCycles (user's setting).
+        if (_cyclesRemaining < _totalCycles) {
+          _cyclesRemaining++; // Increment remaining cycles
+        }
+        // Force to inhale phase for this (potentially new) cycle
+        _currentPhaseDuration = _inhaleDuration;
+        _phase = BreathingPhase.inhale;
+        break;
+      case BreathingPhase.initial:
+      case BreathingPhase.complete:
+        // For initial or complete states, just restore to that state as is.
+        // No special cycle rewind/add logic.
+        _currentPhaseDuration =
+            memento.currentDuration; // Use saved phase duration
+        _phase = restoredPhase;
+        break;
     }
+
+    // 3. Restart timer if applicable after applying custom logic
+    // Only start timer if it's not complete and cycles remain.
+    if (_phase != BreathingPhase.complete && _cyclesRemaining > 0) {
+      // If we resumed from paused, continue from current phase duration.
+      // Otherwise, start from inhale duration (for rewind to inhale).
+      _startPhase(_currentPhaseDuration, _phase);
+    } else {
+      // If no cycles remain or state is complete, ensure timer is canceled and phase is complete.
+      _timer?.cancel();
+      _phase = BreathingPhase.complete;
+    }
+
     notifyListeners();
   }
 
+  /// Starts or resumes the breathing exercise.
   void start() {
-    if (_phase == BreathingPhase.complete) {
-      _currentPhaseDuration = 0;
-      _cyclesRemaining = _totalCycles;
-      _phase = BreathingPhase.initial;
-    } else if (_phase == BreathingPhase.paused) {
-      // Logic for resuming from paused state
-    } else {
-      _currentPhaseDuration = 0;
-      _cyclesRemaining = _totalCycles;
-      _phase = BreathingPhase.initial;
-    }
-
+    // Crucial: Always cancel any existing timer before starting a new one.
     _timer?.cancel();
 
-    if (_phase == BreathingPhase.initial || _phase == BreathingPhase.paused) {
-      _startPhase(
-        _currentPhaseDuration > 0 ? _currentPhaseDuration : _inhaleDuration,
-        BreathingPhase.inhale,
-      );
+    if (_phase == BreathingPhase.complete) {
+      // If completed, restart from beginning of session
+      _currentPhaseDuration = 0;
+      _cyclesRemaining = _totalCycles;
+      _phase = BreathingPhase.initial;
+      _startPhase(_inhaleDuration, BreathingPhase.inhale);
+    } else if (_phase == BreathingPhase.paused) {
+      // Resume from paused state. Continue from where it left off.
+      _startPhase(_currentPhaseDuration, _phase);
+    } else {
+      // Initial start (from initial phase)
+      _currentPhaseDuration = 0;
+      _cyclesRemaining = _totalCycles;
+      _phase = BreathingPhase.initial;
+      _startPhase(_inhaleDuration, BreathingPhase.inhale);
     }
-    notifyListeners();
+    notifyListeners(); // Notify after state changes and potential timer start
   }
 
   void pause() {
@@ -158,22 +186,26 @@ class BreathingNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Internal method to manage the transitions between breathing phases.
   void _startPhase(int initialDuration, BreathingPhase newPhase) {
     _currentPhaseDuration = initialDuration;
     _phase = newPhase;
+
+    // Ensure only one timer is active
+    _timer
+        ?.cancel(); // Redundant with start(), but good for safety if called directly
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_currentPhaseDuration > 0) {
         _currentPhaseDuration--;
       }
 
-      // We only decrement cycles at the END of a full cycle
-      // But we need to ensure the timer stops if cycles remaining is 0
+      // Check for session completion if cyclesRemaining is 0 and current phase duration hits 0
       if (_cyclesRemaining == 0 && _currentPhaseDuration == 0) {
         _timer?.cancel();
         _phase = BreathingPhase.complete;
         notifyListeners();
-        return; // Exit to prevent further processing
+        return;
       }
 
       notifyListeners();
@@ -181,7 +213,7 @@ class BreathingNotifier extends ChangeNotifier {
       // Check if current phase is done
       if (_currentPhaseDuration == 0) {
         _timer?.cancel(); // Phase complete, move to next or end session
-        _moveToNextPhase(); // Always try to move to next phase. Cycle count check is there.
+        _moveToNextPhase();
       }
     });
   }
@@ -215,7 +247,7 @@ class BreathingNotifier extends ChangeNotifier {
           notifyListeners();
         }
         break;
-      case BreathingPhase.initial: // This case handles the very first start
+      case BreathingPhase.initial:
         _startPhase(_inhaleDuration, BreathingPhase.inhale);
         break;
       case BreathingPhase.paused:

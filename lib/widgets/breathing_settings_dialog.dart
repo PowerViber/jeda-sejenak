@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
 import 'package:jeda_sejenak/models/breathing_session_config.dart';
 import 'package:jeda_sejenak/builders/breathing_session_config_builder.dart';
-import 'package:jeda_sejenak/notifiers/app_settings_notifier.dart'; // Import AppSettingsNotifier
+import 'package:jeda_sejenak/notifiers/app_settings_notifier.dart';
 
 class BreathingSettingsDialog extends StatefulWidget {
   const BreathingSettingsDialog({super.key});
@@ -16,11 +16,8 @@ class BreathingSettingsDialog extends StatefulWidget {
 }
 
 class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
-  final TextEditingController _inhaleController = TextEditingController();
-  final TextEditingController _holdController = TextEditingController();
-  final TextEditingController _exhaleController = TextEditingController();
-  final TextEditingController _cycleCountController =
-      TextEditingController(); // Changed from sessionTimeController
+  // Removed _inhaleController, _holdController, _exhaleController
+  final TextEditingController _cycleCountController = TextEditingController();
 
   @override
   void initState() {
@@ -29,21 +26,15 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
     final appSettings = Provider.of<AppSettingsNotifier>(
       context,
       listen: false,
-    ); // Get AppSettings
+    );
 
-    _inhaleController.text = notifier.inhaleDuration.toString();
-    _holdController.text = notifier.holdDuration.toString();
-    _exhaleController.text = notifier.exhaleDuration.toString();
-    _cycleCountController.text = appSettings.breathingCycleCount
-        .toString(); // Use count from AppSettings
+    // Only initialize cycle count controller
+    _cycleCountController.text = appSettings.breathingCycleCount.toString();
   }
 
   @override
   void dispose() {
-    _inhaleController.dispose();
-    _holdController.dispose();
-    _exhaleController.dispose();
-    _cycleCountController.dispose(); // Changed
+    _cycleCountController.dispose();
     super.dispose();
   }
 
@@ -54,56 +45,29 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
       listen: false,
     );
 
-    int inhale = int.tryParse(_inhaleController.text) ?? 0;
-    int hold = int.tryParse(_holdController.text) ?? 0;
-    int exhale = int.tryParse(_exhaleController.text) ?? 0;
-    int totalCycles = int.tryParse(_cycleCountController.text) ?? 0; // Changed
+    int totalCycles = int.tryParse(_cycleCountController.text) ?? 0;
 
-    // Update AppSettingsNotifier
+    // Update AppSettingsNotifier for persistence of cycle count
     appSettings.setBreathingCycleCount(totalCycles);
 
-    // Using the Builder Pattern here
+    // Using the Builder Pattern here for totalCycles
     final BreathingSessionConfig config = BreathingSessionConfigBuilder()
-        .setInhaleDuration(inhale)
-        .setHoldDuration(hold)
-        .setExhaleDuration(exhale)
-        .setTotalCycles(totalCycles) // Changed
+        .setTotalCycles(totalCycles)
         .build();
 
     notifier.applyConfiguration(
       config,
-    ); // Apply the built configuration to BreathingNotifier
-    Navigator.pop(context);
+    ); // Apply the built configuration (only cycles)
+    Navigator.pop(context); // Close the bottom sheet
   }
 
-  void _applyPredefinedPattern(String patternName, BreathingNotifier notifier) {
-    final Map<String, List<int>> predefinedPatterns = {
-      '4-4-6': [4, 4, 6],
-      '4-7-8': [4, 7, 8],
-    };
-    final pattern = predefinedPatterns[patternName];
-    if (pattern != null) {
-      final appSettings = Provider.of<AppSettingsNotifier>(
-        context,
-        listen: false,
-      );
-      final int totalCycles =
-          int.tryParse(_cycleCountController.text) ??
-          appSettings.breathingCycleCount; // Keep current cycle count
-
-      final BreathingSessionConfig config = BreathingSessionConfigBuilder()
-          .setInhaleDuration(pattern[0])
-          .setHoldDuration(pattern[1])
-          .setExhaleDuration(pattern[2])
-          .setTotalCycles(totalCycles) // Changed
-          .build();
-
-      notifier.applyConfiguration(config);
-      // Update text controllers in dialog to reflect selected predefined pattern
-      _inhaleController.text = pattern[0].toString();
-      _holdController.text = pattern[1].toString();
-      _exhaleController.text = pattern[2].toString();
-    }
+  // Helper method for predefined patterns (now directly sets pattern in notifier)
+  void _selectPredefinedPattern(
+    String patternName,
+    BreathingNotifier notifier,
+  ) {
+    notifier.selectPredefinedPattern(patternName);
+    // No need to update text controllers for inhale/hold/exhale as they are removed.
   }
 
   @override
@@ -139,30 +103,16 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
           ),
           const Divider(),
           const SizedBox(height: 16),
-          // Breathing Pattern Input
+          // Breathing Pattern Selection (only predefined options)
           const Text(
-            'Breathing Pattern (Inhale-Hold-Exhale):',
+            'Select Breathing Pattern:',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _buildPatternInputField(_inhaleController, 'Inhale'),
-              ),
-              const Text(' - '),
-              Expanded(child: _buildPatternInputField(_holdController, 'Hold')),
-              const Text(' - '),
-              Expanded(
-                child: _buildPatternInputField(_exhaleController, 'Exhale'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Predefined pattern buttons (now in dialog)
           Wrap(
             spacing: 10,
             children: [
+              // Predefined pattern buttons
               _buildPredefinedPatternButton(
                 context,
                 '4-4-6',
@@ -176,18 +126,18 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
             ],
           ),
           const SizedBox(height: 16),
-          // Total Cycle Count Input
+          // Total Cycle Count Input (remains)
           const Text(
-            'Total Cycles per Session:', // Changed text
+            'Total Cycles per Session:',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 10),
           TextField(
-            controller: _cycleCountController, // Changed controller
+            controller: _cycleCountController,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
-              labelText: 'Cycles', // Changed label
+              labelText: 'Cycles',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -219,23 +169,8 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
     );
   }
 
-  Widget _buildPatternInputField(
-    TextEditingController controller,
-    String label,
-  ) {
-    return TextField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      textAlign: TextAlign.center,
-      decoration: InputDecoration(
-        labelText: label,
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
+  // Simplified: No longer builds pattern input fields
+  // Widget _buildPatternInputField(TextEditingController controller, String label) { ... }
 
   Widget _buildPredefinedPatternButton(
     BuildContext context,
@@ -254,7 +189,7 @@ class _BreathingSettingsDialogState extends State<BreathingSettingsDialog> {
       side: const BorderSide(color: Colors.blueAccent),
       onSelected: (selected) {
         if (selected) {
-          _applyPredefinedPattern(patternName, notifier);
+          _selectPredefinedPattern(patternName, notifier); // Use the new helper
         }
       },
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),

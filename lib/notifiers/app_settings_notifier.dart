@@ -47,9 +47,7 @@ class AppSettingsNotifier extends ChangeNotifier {
     if (_userPlaylist.isEmpty && tracks.isNotEmpty) {
       _userPlaylist = List.from(tracks);
       // Set the first track as default if no other default is specified
-      if (_defaultAudioTrackId == null) {
-        _defaultAudioTrackId = _userPlaylist.first.id;
-      }
+      _defaultAudioTrackId ??= _userPlaylist.first.id;
     }
     notifyListeners();
     // Later: Load/Save from SharedPreferences

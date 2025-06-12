@@ -3,27 +3,10 @@ import 'package:jeda_sejenak/models/breathing_session_config.dart';
 
 /// The Concrete Builder: Provides methods to construct a BreathingSessionConfig step-by-step.
 class BreathingSessionConfigBuilder {
-  int? _inhaleDuration;
-  int? _holdDuration;
-  int? _exhaleDuration;
-  int? _totalCycles; // Changed from _totalSessionDurationMinutes
+  // Removed _inhaleDuration, _holdDuration, _exhaleDuration
+  int? _totalCycles; // Only totalCycles remains
 
-  BreathingSessionConfigBuilder setInhaleDuration(int value) {
-    _inhaleDuration = value;
-    return this;
-  }
-
-  BreathingSessionConfigBuilder setHoldDuration(int value) {
-    _holdDuration = value;
-    return this;
-  }
-
-  BreathingSessionConfigBuilder setExhaleDuration(int value) {
-    _exhaleDuration = value;
-    return this;
-  }
-
-  // Changed method name and parameter
+  // Removed setInhaleDuration, setHoldDuration, setExhaleDuration
   BreathingSessionConfigBuilder setTotalCycles(int value) {
     _totalCycles = value;
     return this;
@@ -31,20 +14,9 @@ class BreathingSessionConfigBuilder {
 
   /// Builds and returns the final BreathingSessionConfig product.
   BreathingSessionConfig build() {
-    if (_inhaleDuration == null ||
-        _holdDuration == null ||
-        _exhaleDuration == null ||
-        _totalCycles == null) {
-      // Changed
-      throw StateError(
-        'Inhale, Hold, Exhale durations and Total Cycles must all be set.',
-      );
+    if (_totalCycles == null) {
+      throw StateError('Total Cycles must be set before calling build().');
     }
-    return BreathingSessionConfig.builder(
-      inhaleDuration: _inhaleDuration!,
-      holdDuration: _holdDuration!,
-      exhaleDuration: _exhaleDuration!,
-      totalCycles: _totalCycles!, // Changed
-    );
+    return BreathingSessionConfig.builder(totalCycles: _totalCycles!);
   }
 }

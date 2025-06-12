@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jeda_sejenak/notifiers/app_settings_notifier.dart';
-import 'package:jeda_sejenak/notifiers/breathing_notifier.dart';
+import 'package:jeda_sejenak/notifiers/breathing_notifier.dart'; // To update breathing notifier directly
 
 class BreathingCycleSettingsScreen extends StatefulWidget {
   const BreathingCycleSettingsScreen({super.key});
@@ -32,12 +32,11 @@ class _BreathingCycleSettingsScreenState
         _currentCycleCount = 1; // Minimum 1 cycle
       }
     });
-    // Update notifier immediately
+    // Update notifier immediately when +/- buttons are pressed
     Provider.of<AppSettingsNotifier>(
       context,
       listen: false,
     ).setBreathingCycleCount(_currentCycleCount);
-    // Also update breathing notifier directly to apply this setting
     Provider.of<BreathingNotifier>(
       context,
       listen: false,
@@ -46,6 +45,8 @@ class _BreathingCycleSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
+    // AppSettingsNotifier is watched indirectly via _currentCycleCount,
+    // but the actual update comes from _updateCycleCount.
     return Scaffold(
       appBar: AppBar(
         title: const Text('Breathing Cycle'),
@@ -72,7 +73,6 @@ class _BreathingCycleSettingsScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Decrement button
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.blueAccent,
@@ -95,7 +95,6 @@ class _BreathingCycleSettingsScreenState
                     ),
                   ),
                 ),
-                // Increment button
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.blueAccent,
