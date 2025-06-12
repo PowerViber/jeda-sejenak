@@ -45,8 +45,6 @@ class _BreathingCycleSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    // AppSettingsNotifier is watched indirectly via _currentCycleCount,
-    // but the actual update comes from _updateCycleCount.
     return Scaffold(
       appBar: AppBar(
         title: const Text('Breathing Cycle'),

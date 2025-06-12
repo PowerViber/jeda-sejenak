@@ -34,8 +34,6 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
         listen: false,
       );
 
-      // If no track is currently set in the audio player, try to play the default one
-      // from AppSettingsNotifier's user playlist
       if (audioPlayerNotifier.currentTrack == null &&
           appSettingsNotifier.defaultAudioTrackId != null) {
         final defaultTrack = appSettingsNotifier.userPlaylist.firstWhere(
@@ -122,7 +120,7 @@ class _BreatheScreenAudioPlayerState extends State<BreatheScreenAudioPlayer> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const Text(
-                      'Home - Resonance',
+                      '',
                       style: TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   ],

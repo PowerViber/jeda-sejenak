@@ -102,10 +102,7 @@ class _BreatheScreenState extends State<BreatheScreen> {
     final breathingNotifier = context.watch<BreathingNotifier>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Breathing'),
-        // Removed actions: [...] here
-      ),
+      appBar: AppBar(title: const Text('Breathing')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -113,7 +110,6 @@ class _BreatheScreenState extends State<BreatheScreen> {
             const CustomSearchBar(),
             const SizedBox(height: 16),
 
-            // Display current pattern and total cycles for user info
             Card(
               margin: const EdgeInsets.only(bottom: 16),
               elevation: 2,
@@ -155,7 +151,6 @@ class _BreatheScreenState extends State<BreatheScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Pattern selection buttons (reintroduced)
             Wrap(
               spacing: 10,
               children: [
@@ -173,7 +168,6 @@ class _BreatheScreenState extends State<BreatheScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Main Breathing Circle and Controls
             GestureDetector(
               onTap: () {
                 if (breathingNotifier.phase == BreathingPhase.initial ||

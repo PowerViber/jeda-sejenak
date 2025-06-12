@@ -44,12 +44,10 @@ class _NotificationSettingsScreenState
   void _updateReminderTime() {
     int hours = int.tryParse(_hourController.text) ?? 0;
     int minutes = int.tryParse(_minuteController.text) ?? 0;
-    // Basic validation
     if (hours < 0 || hours > 23) hours = 0; // Hours 0-23
     if (minutes < 0 || minutes > 59) minutes = 0; // Minutes 0-59
 
     _appSettingsNotifier.setNotificationReminderTime(hours, minutes);
-    // Later: Reschedule notification here
   }
 
   @override
@@ -78,16 +76,13 @@ class _NotificationSettingsScreenState
                 value: appSettingsNotifier.notificationsEnabled,
                 onChanged: (value) {
                   appSettingsNotifier.setNotificationsEnabled(value);
-                  // Later: Enable/disable or schedule/cancel notifications here
                 },
                 activeColor: Colors.blueAccent,
               ),
               contentPadding: EdgeInsets.zero,
             ),
             const Divider(),
-            // --- Conditional display for reminder time ---
-            if (appSettingsNotifier
-                .notificationsEnabled) // Only show if notifications are enabled
+            if (appSettingsNotifier.notificationsEnabled)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -158,7 +153,6 @@ class _NotificationSettingsScreenState
                   ),
                 ],
               ),
-            // --- End of conditional display ---
           ],
         ),
       ),

@@ -61,7 +61,6 @@ class AddMusicScreen extends StatelessWidget {
                     trailing: ElevatedButton(
                       onPressed: () {
                         appSettingsNotifier.addTrackToUserPlaylist(track);
-                        // Optionally show a snackbar confirmation
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('${track.title} added to playlist!'),

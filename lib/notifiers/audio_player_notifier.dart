@@ -11,15 +11,12 @@ class AudioPlayerNotifier extends ChangeNotifier {
   bool _isPlaying = false;
   double _volume = 1.0;
 
-  // Expose the internal AudioPlayer for direct observation by UI widgets
   AudioPlayer get audioPlayer => _audioPlayer;
 
-  // The concatenating source is managed internally
   ConcatenatingAudioSource _concatenatingAudioSource = ConcatenatingAudioSource(
     children: [],
   );
-  List<AudioTrack> _currentPlaylistTracks =
-      []; // Keep a reference to the actual AudioTrack objects
+  List<AudioTrack> _currentPlaylistTracks = [];
 
   AudioTrack? get currentTrack => _currentTrack;
   Duration get currentPosition => _currentPosition;
@@ -46,17 +43,13 @@ class AudioPlayerNotifier extends ChangeNotifier {
       notifyListeners();
     });
 
-    // CRITICAL FIX: Listen to currentIndexStream to update _currentTrack
-    // when JustAudio changes tracks (e.g., on skipNext/Previous, or song finishes)
     _audioPlayer.currentIndexStream.listen((index) {
       if (index != null &&
           index >= 0 &&
           index < _currentPlaylistTracks.length) {
-        // Update _currentTrack based on the actual playlist at the new index
         _currentTrack = _currentPlaylistTracks[index];
-        notifyListeners(); // Notify listeners that currentTrack has changed
+        notifyListeners();
       } else if (index == null && _audioPlayer.sequence?.isEmpty == true) {
-        // If playlist becomes empty or playback ends
         _currentTrack = null;
         notifyListeners();
       }
@@ -70,10 +63,8 @@ class AudioPlayerNotifier extends ChangeNotifier {
     List<AudioTrack> tracks, {
     String? initialTrackId,
   }) async {
-    _currentPlaylistTracks =
-        tracks; // Store reference to the actual AudioTrack objects
+    _currentPlaylistTracks = tracks;
     _concatenatingAudioSource = ConcatenatingAudioSource(
-      // Use tag to store the AudioTrack ID for easy retrieval
       children: tracks
           .map((track) => AudioSource.asset(track.filePath, tag: track.id))
           .toList(),
@@ -90,13 +81,11 @@ class AudioPlayerNotifier extends ChangeNotifier {
       );
       if (initialIndex != -1) {
         await _audioPlayer.seek(Duration.zero, index: initialIndex);
-        _currentTrack =
-            _currentPlaylistTracks[initialIndex]; // Set current track immediately
+        _currentTrack = _currentPlaylistTracks[initialIndex];
         notifyListeners();
       }
     } else if (tracks.isNotEmpty) {
-      _currentTrack = _currentPlaylistTracks
-          .first; // Set current track to first if no initial ID
+      _currentTrack = _currentPlaylistTracks.first;
       notifyListeners();
     } else {
       _currentTrack = null; // No tracks in playlist
@@ -112,15 +101,8 @@ class AudioPlayerNotifier extends ChangeNotifier {
     if (index != -1) {
       await _audioPlayer.seek(Duration.zero, index: index);
       await _audioPlayer.play();
-      // _currentTrack will be updated by currentIndexStream listener
     } else {
-      // If the track is not in the current playlist, re-initialize the playlist
-      // This might happen if 'My Playlist' updates and the AudioPlayerNotifier isn't fully re-set.
-      // For now, we'll re-add it or just play it if it's not part of the active list.
-      // A more robust app might update the ConcatenatingAudioSource dynamically.
-      await setAudioPlaylist([
-        track,
-      ], initialTrackId: track.id); // Play just this track
+      await setAudioPlaylist([track], initialTrackId: track.id);
       await _audioPlayer.play();
     }
   }
@@ -146,12 +128,10 @@ class AudioPlayerNotifier extends ChangeNotifier {
   }
 
   Future<void> playNext() async {
-    // JustAudio's built-in seekToNext handles sequence
     await _audioPlayer.seekToNext();
   }
 
   Future<void> playPrevious() async {
-    // JustAudio's built-in seekToPrevious handles sequence
     await _audioPlayer.seekToPrevious();
   }
 
@@ -164,8 +144,6 @@ class AudioPlayerNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Helper method to allow external components to force update _currentTrack
-  // (Used by _NowPlayingBar and BreatheScreenAudioPlayer after skip actions)
   void updateCurrentTrack(AudioTrack track) {
     if (_currentTrack?.id != track.id) {
       _currentTrack = track;

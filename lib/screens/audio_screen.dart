@@ -227,7 +227,7 @@ class _NowPlayingBar extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      'Home - Resonance',
+                      '',
                       style: TextStyle(color: Colors.grey[700], fontSize: 13),
                     ),
                   ],
@@ -244,7 +244,6 @@ class _NowPlayingBar extends StatelessWidget {
                 color: Colors.blueAccent,
                 onPressed: () async {
                   await audioPlayerNotifier.playPrevious();
-                  // Update currentTrack based on what JustAudio is now playing
                   if (audioPlayerNotifier.audioPlayer.currentIndex != null) {
                     final newCurrentIndex =
                         audioPlayerNotifier.audioPlayer.currentIndex!;
